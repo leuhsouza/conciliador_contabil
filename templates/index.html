@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Conciliador de Lançamentos Contábeis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .highlight {
+            background-color: lightgreen;
+        }
+        .selected {
+            background-color: lightblue;
+        }
+    </style>
+    <!-- Adicionando jQuery via CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Conciliador de Lançamentos Contábeis</h1>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit" value="Upload">
+    </form>
+    <form action="/download" method="post" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit" value="Download Processed File">
+    </form>
+    <form  action="/upload" method ="post" enctype ="multipart/form-data">
+        <input type="file" name = "file">
+        <input type="submit" value="Upload">
+    </form>
+
+    <div>
+        {{ table|safe }}
+    </div>
+    <script>
+        $(document).ready(function() {
+            let selectedRow = null;
+
+            $('table.data tr').attr('tabindex', 0).on('click', function() {
+                if (selectedRow) {
+                    $(selectedRow).removeClass('selected');
+                }
+                selectedRow = this;
+                $(this).addClass('selected').focus();
+            }).on('dblclick', function() {
+                $(this).toggleClass('highlight');
+            }).on('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Prevent default action
+                    $(this).toggleClass('highlight');
+                }
+            });
+
+            $(document).on('keydown', function(event) {
+                if (!selectedRow) return;
+
+                let rows = $('table.data tr');
+                let index = rows.index(selectedRow);
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault(); // Prevent default action
+                    if (index < rows.length - 1) {
+                        $(selectedRow).removeClass('selected');
+                        selectedRow = rows.get(index + 1);
+                        $(selectedRow).addClass('selected').focus();
+                    }
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault(); // Prevent default action
+                    if (index > 0) {
+                        $(selectedRow).removeClass('selected');
+                        selectedRow = rows.get(index - 1);
+                        $(selectedRow).addClass('selected').focus();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
