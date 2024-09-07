@@ -49,5 +49,8 @@ def data():
 def arquivo_pix():
     return
 
+# if __name__ == '__main__':
+#     app.run(host='192.168.0.77', port=5000, debug=True)
+
 if __name__ == '__main__':
-    app.run(host='192.168.0.77', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
