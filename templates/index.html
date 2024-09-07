@@ -22,6 +22,13 @@
         <input type="file" name="file">
         <input type="submit" value="Upload">
     </form>
+    <button onclick="irparabanco()">Ver banco de dados</button>
+ 
+    <script>
+        function irparabanco() {
+            window.location.href = "{{ url_for('data') }}"; // Gera a URL para a página inicial
+        }
+    </script>
     <h2> Limpar arquivo Lote e Razão </h2>
     <form action="/download" method="post" enctype="multipart/form-data">
         <input type="file" name="file">
