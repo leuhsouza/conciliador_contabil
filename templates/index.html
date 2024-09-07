@@ -17,14 +17,17 @@
 </head>
 <body>
     <h1>Conciliador de Lançamentos Contábeis</h1>
+    <h2> Banco de Dados </h2>
     <form action="/upload" method="post" enctype="multipart/form-data">
         <input type="file" name="file">
         <input type="submit" value="Upload">
     </form>
+    <h2> Limpar arquivo Lote e Razão </h2>
     <form action="/download" method="post" enctype="multipart/form-data">
         <input type="file" name="file">
         <input type="submit" value="Download Processed File">
     </form>
+    <h2> Gerar Arquivo Pix </h2>
     <form  action="/upload" method ="post" enctype ="multipart/form-data">
         <input type="file" name = "file">
         <input type="submit" value="Upload">
