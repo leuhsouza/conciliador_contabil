@@ -1,0 +1,26 @@
+table.data {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table.data th, table.data td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: left;
+}
+
+table.data tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+table.data tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+table.data tr[data-conciliado="True"] {
+    background-color: lightgreen !important;
+}
+
+table.data tr[data-conciliado="False"] {
+    background-color: lightcoral !important;
+}
