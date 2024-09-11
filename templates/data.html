@@ -15,6 +15,13 @@
     </style>
 </head>
 <body>
+    <button onclick="voltarParaInicio()">Voltar para Início</button>
+ 
+    <script>
+        function voltarParaInicio() {
+            window.location.href = "{{ url_for('index') }}"; // Gera a URL para a página inicial
+        }
+    </script>
     <h1>Dados</h1>
     <form action="/download" method="post" enctype="multipart/form-data">
         <input type="file" name="file">
