@@ -16,7 +16,11 @@
 </head>
 <body>
     <button onclick="voltarParaInicio()">Voltar para Início</button>
- 
+    <form method="post">
+        <label for="filter_field">Filtro:</label>
+        <input type="text" id="filter_field" name="filter_field">
+        <button type="submit">Apply Filter</button>
+    </form>
     <script>
         function voltarParaInicio() {
             window.location.href = "{{ url_for('index') }}"; // Gera a URL para a página inicial

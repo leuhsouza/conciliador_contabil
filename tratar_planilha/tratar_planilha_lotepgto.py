@@ -32,8 +32,10 @@ def process_excel(file_path, output_path):
         df.drop(rows_to_delete, inplace=True, errors='ignore')
 
         # Atualizar o índice atual para continuar a busca
-        current_index = index_to_delete + 8
+        # Ao resetar o indice ele nao buga quando tem muitas paginas
+        df.reset_index(drop=True, inplace=True)
 
+        #current_index = index_to_delete + 8 (Causa bug em grande volume de paginas)
     # Remover linhas em branco
     df.dropna(how='all', inplace=True)
 
