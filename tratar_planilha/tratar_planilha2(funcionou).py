@@ -32,7 +32,7 @@ def process_excel(file_path, output_path):
         df.drop(rows_to_delete, inplace=True, errors='ignore')
 
         # Atualizar o índice atual para continuar a busca
-        current_index = index_to_delete + 9
+        df.reset_index(drop=True, inplace=True)
 
     # Remover linhas em branco
     df.dropna(how='all', inplace=True)
