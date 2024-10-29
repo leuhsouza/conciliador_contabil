@@ -37,10 +37,25 @@ def download_file():
         process_excel(file_path, 'database.sqlite', output_path)
         return send_file(output_path, as_attachment=True)
 
-@app.route('/data')
+# @app.route('/data')
+# def data():
+#     conn = sqlite3.connect('database.sqlite')
+#     df = pd.read_sql_query("SELECT * FROM dados", conn)
+#     conn.close()
+#     table_html = df.to_html(classes='data', index=False)
+#     return render_template('data.html', table=table_html)
+@app.route('/data', methods=['GET','POST'])
 def data():
     conn = sqlite3.connect('database.sqlite')
-    df = pd.read_sql_query("SELECT * FROM dados", conn)
+    query = "SELECT * FROM dados"
+    filters = []
+
+    if request.method == 'POST':
+        filter_value = request.form.get('filter_field')
+        if filter_value:
+            query += " WHERE coluna2 LIKE ?"
+            filters.append(f"%{filter_value}%")
+    df = pd.read_sql_query(query,conn,params=filters)
     conn.close()
     table_html = df.to_html(classes='data', index=False)
     return render_template('data.html', table=table_html)
