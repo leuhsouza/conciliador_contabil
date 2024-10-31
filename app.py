@@ -10,6 +10,7 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
+# opção para subir no banco de dados
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -60,6 +61,7 @@ def data():
     table_html = df.to_html(classes='data', index=False)
     return render_template('data.html', table=table_html)
 
+#define função para pix
 @app.route('/pix')
 def arquivo_pix():
     return
