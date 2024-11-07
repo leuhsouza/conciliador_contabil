@@ -33,3 +33,9 @@ table.data th {
 .selected {
     background-color: lightblue !important;
 }
+
+
+.hidden {
+    display: none;
+}
+

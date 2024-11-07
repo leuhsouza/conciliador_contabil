@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Escolha o arquivo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+</head>
+<body>
+    <h1>Escolha a Planilha e o tipo de arquivo</h1>
+    <form action="/process_data" method="post">
+        <input type="hidden" name="file_path" value="{{ file_path }}">
+        <label for="tipo">Tipo de Arquivo:</label>
+        <select name="tipo" id="tipo" required>
+            <option value="Razao">Razao</option>
+            <option value="Lote">Lote</option>
+        </select>
+        <br><br>
+
+        <div id="opcaoRazao" class="hidden">
+            <label for="subtipo">Selecione a Opção:</label>
+            <select name="subtipo" id="subtipo">
+                <option value="unitaria">Conta Unitaria</option>
+                <option value="varias">Varias Contas</option>
+            </select>
+            <br><br>
+        </div>
+
+        <button type="submit">Processar Arquivo</button>
+    </form>
+</body>
+</html>

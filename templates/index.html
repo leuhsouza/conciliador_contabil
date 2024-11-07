@@ -30,9 +30,10 @@
         }
     </script>
     <h2> Limpar arquivo Lote e Razão </h2>
-    <form action="/download" method="post" enctype="multipart/form-data">
-        <input type="file" name="file">
-        <input type="submit" value="Download Processed File">
+    <form action="/import_data" method="post" enctype="multipart/form-data">
+        <label for="file">Selecione o arquivo Excel:</label>
+        <input type="file" name="file" id="file" required>
+        <button type="submit">Enviar Arquivo</button>
     </form>
 
     <h2> Gerar Arquivo Pix </h2>

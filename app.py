@@ -106,6 +106,44 @@ def process_pix():
 
     return redirect(url_for('arquivo_pix'))
 
+@app.route ('/import_data', methods=['GET', 'POST'])
+def import_data():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return redirect(request.url)
+        
+        file = request.files['file']
+        if file.filename == '':
+            return redirect(request.url)
+        
+        file_path = 'uploaded_file.xlsx'
+        file.save(file_path)
+        
+        
+        # Renderiza um formulário para escolher a planilha
+        return render_template('import_data.html', file_path=file_path)
+
+    return render_template('import_data.html')
+
+@app.route('/process_data', methods=['POST'])
+def process_data():
+    file_path = request.form.get('file_path')
+
+    tipo = request.form.get('tipo')  # Captura o tipo de arquivo (Pix ou Avulso)
+
+    if file_path and tipo:
+        conteudo = processar_lancamentos(file_path, tipo)
+        
+        # Salva o conteúdo em um arquivo .txt para download
+        output_path = 'arquivo_pix.txt'
+        with open(output_path, 'w') as f:
+            for linha in conteudo:
+                f.write(linha[0] + "\n")
+        
+        return send_file(output_path, as_attachment=True)
+
+    return redirect(url_for('arquivo_pix'))
+
 
 
 # if __name__ == '__main__':
