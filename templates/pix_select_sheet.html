@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Escolha de Planilha</title>
+</head>
+<body>
+    <h1>Escolha a Planilha, o Tipo e Insira a Data do Lançamento</h1>
+    <form action="/process_pix" method="post">
+        <input type="hidden" name="file_path" value="{{ file_path }}">
+        
+        <label for="sheet_name">Escolha a Planilha:</label>
+        <select name="sheet_name" id="sheet_name" required>
+            {% for sheet in sheet_names %}
+                <option value="{{ sheet }}">{{ sheet }}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        
+        <label for="data">Data do Lançamento (formato DDMMAAAA):</label>
+        <input type="text" name="data" id="data" required>
+        <br><br>
+
+        <label for="tipo">Tipo de Arquivo:</label>
+        <select name="tipo" id="tipo" required>
+            <option value="Pix">Pix</option>
+            <option value="Avulso">Avulso</option>
+        </select>
+        <br><br>
+
+        <button type="submit">Processar Arquivo</button>
+    </form>
+</body>
+</html>

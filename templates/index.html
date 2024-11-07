@@ -34,11 +34,15 @@
         <input type="file" name="file">
         <input type="submit" value="Download Processed File">
     </form>
+
     <h2> Gerar Arquivo Pix </h2>
-    <form  action="/upload" method ="post" enctype ="multipart/form-data">
-        <input type="file" name = "file">
-        <input type="submit" value="Upload">
+    <form action="/pix" method="post" enctype="multipart/form-data">
+        <label for="file">Selecione o arquivo Excel:</label>
+        <input type="file" name="file" id="file" required>
+        <button type="submit">Enviar Arquivo</button>
     </form>
+        
+    
 
     <div>
         {{ table|safe }}
