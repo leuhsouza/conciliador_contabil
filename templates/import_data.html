@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <title>Escolha o arquivo</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <h1>Escolha a Planilha e o tipo de arquivo</h1>
-    <form action="/process_data" method="post">
+    <form id="processForm" action="/process_data" method="post">
         <input type="hidden" name="file_path" value="{{ file_path }}">
         <label for="tipo">Tipo de Arquivo:</label>
         <select name="tipo" id="tipo" required>
@@ -26,7 +26,54 @@
             <br><br>
         </div>
 
+        <label for="enviar_bd">Enviar para o banco de dados:</label>
+        <input type="checkbox" id="enviar_bd" name="enviar_bd">
+        <br><br>
+
         <button type="submit">Processar Arquivo</button>
     </form>
+
+    <script>
+        document.getElementById('processForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Impede o envio padrão do formulário
+            const formData = new FormData(this);
+    
+            fetch('/process_data', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Sucesso',
+                        text: data.message,
+                        icon: 'success',
+                        confirmButtonText: 'Baixar Arquivo'
+                    }).then((result) => {
+                        if (result.isConfirmed && data.download_url) {
+                            window.location.href = data.download_url; // Faz o download do arquivo
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Erro',
+                        text: data.message,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Erro',
+                    text: 'Ocorreu um problema ao processar o arquivo.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                console.error('Erro:', error);
+            });
+        });
+    </script>
 </body>
 </html>
