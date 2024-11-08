@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify
 import sqlite3
 import pandas as pd
-from services.data_cleaning import process_excel
+from services.data_cleaning import process_excel, process_excel_varias_contas
 from services.pixtxt import processar_lancamentos
 import os
 
@@ -11,7 +11,6 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
-# opção para subir no banco de dados
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -58,11 +57,9 @@ def arquivo_pix():
         file_path = 'uploaded_file.xlsx'
         file.save(file_path)
 
-        # Carrega o arquivo e obtém os nomes das planilhas
         xls = pd.ExcelFile(file_path)
         sheet_names = xls.sheet_names
 
-        # Renderiza um formulário para escolher a planilha
         return render_template('pix_select_sheet.html', sheet_names=sheet_names, file_path=file_path)
 
     return render_template('pix.html')
@@ -72,12 +69,11 @@ def process_pix():
     file_path = request.form.get('file_path')
     sheet_name = request.form.get('sheet_name')
     data = request.form.get('data')
-    tipo = request.form.get('tipo')  # Captura o tipo de arquivo (Pix ou Avulso)
+    tipo = request.form.get('tipo')
 
     if file_path and sheet_name and data and tipo:
         conteudo = processar_lancamentos(file_path, sheet_name, data, tipo)
 
-        # Salva o conteúdo em um arquivo .txt para download
         output_path = 'arquivo_pix.txt'
         with open(output_path, 'w') as f:
             for linha in conteudo:
@@ -100,7 +96,6 @@ def import_data():
         file_path = 'uploaded_file.xlsx'
         file.save(file_path)
 
-        # Renderiza um formulário para escolher a planilha
         return render_template('import_data.html', file_path=file_path)
 
     return render_template('import_data.html')
@@ -109,19 +104,26 @@ def import_data():
 def process_data():
     file_path = request.form.get('file_path')
     tipo = request.form.get('tipo')  # Captura o tipo de arquivo (Razao ou Lote)
-    enviar_bd = 'enviar_bd' in request.form  # Verifica se o checkbox foi marcado
+    subtipo = request.form.get('subtipo')  # Captura o subtipo (Conta Unitaria ou Varias Contas)
+    enviar_bd = 'enviar_bd' in request.form
+
+    # Prints de depuração para verificar os valores recebidos
+    print(f"Tipo recebido: {tipo}")
+    print(f"Subtipo recebido: {subtipo}")
+    print(f"Enviar para o banco de dados: {enviar_bd}")
 
     if file_path and tipo:
         try:
-            # Caminho do banco de dados
             db_path = 'database.sqlite'
-            # Caminho do arquivo de saída em Excel
             output_path = 'processed_file.xlsx'
 
-            # Chama a função para processar o arquivo e contar as linhas importadas
-            linhas_importadas = process_excel(file_path, db_path, output_path, enviar_bd=enviar_bd)
+            if tipo == "Razao" and subtipo == "varias":
+                print("Chamando a função process_excel_varias_contas")
+                linhas_importadas = process_excel_varias_contas(file_path, db_path, output_path, enviar_bd=enviar_bd)
+            else:
+                print("Chamando a função process_excel")
+                linhas_importadas = process_excel(file_path, db_path, output_path, enviar_bd=enviar_bd)
 
-            # Mensagem de retorno
             mensagem = f"Arquivo processado com sucesso. {'Linhas importadas para o banco de dados: ' + str(linhas_importadas) if enviar_bd else 'Nenhuma linha importada, apenas o arquivo foi salvo.'}"
 
             return jsonify(success=True, message=mensagem, download_url=url_for('download_file', filename=output_path))
