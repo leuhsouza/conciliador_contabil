@@ -17,9 +17,13 @@
 <body>
     <button onclick="voltarParaInicio()">Voltar para Início</button>
     <form method="post">
-        <label for="filter_field">Filtro:</label>
+        <label for="filter_field">Filtro por Histórico:</label>
         <input type="text" id="filter_field" name="filter_field">
-        <button type="submit">Apply Filter</button>
+        <br>
+        <label for="filter_conta">Filtro por Conta Contábil:</label>
+        <input type="text" id="filter_conta" name="filter_conta">
+        <br>
+        <button type="submit">Aplicar Filtro</button>
     </form>
     <script>
         function voltarParaInicio() {
@@ -32,7 +36,24 @@
         <input type="submit" value="Download Processed File">
     </form>
     <div>
-        {{ table|safe }}
+        <table>
+            <thead>
+                <tr>
+                    <th><a href="{{ url_for('data', order_by='data', order_direction='asc') }}">Data ↑</a> | <a href="{{ url_for('data', order_by='data', order_direction='desc') }}">↓</a></th>
+                    <th><a href="{{ url_for('data', order_by='historico', order_direction='asc') }}">Histórico ↑</a> | <a href="{{ url_for('data', order_by='historico', order_direction='desc') }}">↓</a></th>
+                    <th><a href="{{ url_for('data', order_by='contra_partida', order_direction='asc') }}">Contra Partida ↑</a> | <a href="{{ url_for('data', order_by='contra_partida', order_direction='desc') }}">↓</a></th>
+                    <th><a href="{{ url_for('data', order_by='lote', order_direction='asc') }}">Lote ↑</a> | <a href="{{ url_for('data', order_by='lote', order_direction='desc') }}">↓</a></th>
+                    <th><a href="{{ url_for('data', order_by='lancamento', order_direction='asc') }}">Lançamento ↑</a> | <a href="{{ url_for('data', order_by='lancamento', order_direction='desc') }}">↓</a></th>
+                    <th><a href="{{ url_for('data', order_by='d', order_direction='asc') }}">D ↑</a> | <a href="{{ url_for('data', order_by='d', order_direction='desc') }}">↓</a></th>
+                    <th><a href="{{ url_for('data', order_by='c', order_direction='asc') }}">C ↑</a> | <a href="{{ url_for('data', order_by='c', order_direction='desc') }}">↓</a></th>
+                    <th><a href="{{ url_for('data', order_by='dc', order_direction='asc') }}">D/C ↑</a> | <a href="{{ url_for('data', order_by='dc', order_direction='desc') }}">↓</a></th>
+                    <th><a href="{{ url_for('data', order_by='conta', order_direction='asc') }}">Conta ↑</a> | <a href="{{ url_for('data', order_by='conta', order_direction='desc') }}">↓</a></th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ table|safe }}
+            </tbody>
+        </table>
     </div>
     <script>
         $(document).ready(function() {
@@ -48,7 +69,7 @@
                 $(this).toggleClass('highlight');
             }).on('keydown', function(event) {
                 if (event.key === 'Enter') {
-                    event.preventDefault(); // Prevent default action
+                    event.preventDefault();
                     $(this).toggleClass('highlight');
                 }
             });
@@ -60,14 +81,14 @@
                 let index = rows.index(selectedRow);
 
                 if (event.key === 'ArrowDown') {
-                    event.preventDefault(); // Prevent default action
+                    event.preventDefault();
                     if (index < rows.length - 1) {
                         $(selectedRow).removeClass('selected');
                         selectedRow = rows.get(index + 1);
                         $(selectedRow).addClass('selected').focus();
                     }
                 } else if (event.key === 'ArrowUp') {
-                    event.preventDefault(); // Prevent default action
+                    event.preventDefault();
                     if (index > 0) {
                         $(selectedRow).removeClass('selected');
                         selectedRow = rows.get(index - 1);

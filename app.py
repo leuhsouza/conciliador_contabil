@@ -33,16 +33,47 @@ def data():
     conn = sqlite3.connect('database.sqlite')
     query = "SELECT * FROM dados"
     filters = []
+    where_clauses = []
+
+    # Lista de colunas válidas para ordenação
+    valid_columns = ['data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta']
+
+    # Captura os parâmetros de ordenação da solicitação
+    order_by = request.args.get('order_by', 'data')  # Define a coluna 'data' como padrão
+    order_direction = request.args.get('order_direction', 'asc')  # 'asc' é o padrão
+
+    # Valida o parâmetro de ordenação para evitar injeção de SQL
+    if order_by not in valid_columns:
+        order_by = 'data'  # Redefine para a coluna padrão se o parâmetro for inválido
+
+    # Valida a direção da ordenação
+    if order_direction.lower() not in ['asc', 'desc']:
+        order_direction = 'asc'  # Redefine para ascendente se o parâmetro for inválido
+
+    # Adiciona a cláusula ORDER BY à consulta SQL
+    query += f" ORDER BY {order_by} {order_direction.upper()}"
 
     if request.method == 'POST':
         filter_value = request.form.get('filter_field')
+        filter_conta = request.form.get('filter_conta')
+
         if filter_value:
-            query += " WHERE coluna2 LIKE ?"
+            where_clauses.append("historico LIKE ?")
             filters.append(f"%{filter_value}%")
+
+        if filter_conta:
+            where_clauses.append("conta LIKE ?")
+            filters.append(f"%{filter_conta}%")
+
+        if where_clauses:
+            query = query.replace('ORDER BY', f"WHERE {' AND '.join(where_clauses)} ORDER BY")
+
     df = pd.read_sql_query(query, conn, params=filters)
     conn.close()
+
     table_html = df.to_html(classes='data', index=False)
     return render_template('data.html', table=table_html)
+
 
 @app.route('/pix', methods=['GET', 'POST'])
 def arquivo_pix():
