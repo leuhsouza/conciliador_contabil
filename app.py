@@ -1,9 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify
+from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, make_response
 import sqlite3
 import pandas as pd
 from services.data_cleaning import process_excel, process_excel_varias_contas
 from services.pixtxt import processar_lancamentos
-import os
+import io
 
 app = Flask(__name__)
 
@@ -163,6 +163,54 @@ def process_data():
             return jsonify(success=False, message=f"Erro ao processar o arquivo: {str(e)}")
 
     return jsonify(success=False, message="Ocorreu um problema: faltam informações necessárias.")
+
+import pandas as pd
+from flask import send_file
+
+@app.route('/download_filtered_data', methods=['POST'])
+def download_filtered_data():
+    filter_value = request.form.get('filter_field')
+    filter_conta = request.form.get('filter_conta')
+
+    conn = sqlite3.connect('database.sqlite')
+    query = "SELECT * FROM dados"
+    filters = []
+    where_clauses = []
+
+    if filter_value:
+        where_clauses.append("historico LIKE ?")
+        filters.append(f"%{filter_value}%")
+
+    if filter_conta:
+        where_clauses.append("conta LIKE ?")
+        filters.append(f"%{filter_conta}%")
+
+    if where_clauses:
+        query += f" WHERE {' AND '.join(where_clauses)}"
+
+    df = pd.read_sql_query(query, conn, params=filters)
+    conn.close()
+
+    if df.empty:
+        return "Nenhum dado encontrado com os filtros aplicados."
+
+    # Salvar o DataFrame em um arquivo Excel com formatação para linhas destacadas
+    output_path = 'filtered_data.xlsx'
+    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='FilteredData')
+        workbook = writer.book
+        worksheet = writer.sheets['FilteredData']
+
+        # Formatação para as linhas destacadas
+        highlighted_format = workbook.add_format({'bg_color': 'yellow'})
+
+        # Destacar linhas que foram selecionadas na tabela
+        for row_num, _ in enumerate(df.index, start=1):
+            if df.iloc[row_num - 1]['highlighted']:  # Suponha que 'highlighted' indique a seleção
+                worksheet.set_row(row_num, None, highlighted_format)
+
+    return send_file(output_path, as_attachment=True)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
