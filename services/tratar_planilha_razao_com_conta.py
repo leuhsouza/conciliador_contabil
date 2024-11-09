@@ -1,6 +1,8 @@
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
+import re
+import os
 
 def escolher_arquivo():
     root = tk.Tk()
@@ -11,22 +13,28 @@ def escolher_arquivo():
     )
     return arquivo_path
 
-def salvar_dataframe_intermediario(df, message="Salvar DataFrame intermediário como"):
-    # Abre uma janela para o usuário escolher o local e nome do arquivo de saída
-    output_path = filedialog.asksaveasfilename(
-        title=message,
-        defaultextension=".xlsx",
-        filetypes=[("Arquivo XLSX", "*.xlsx")]
-    )
-    if output_path:
-        df.to_excel(output_path, index=False, header=False)
-        print(f"DataFrame intermediário salvo como {output_path}")
-    else:
-        print("Nenhum local de salvamento selecionado.")
-
 def process_excel(file_path, output_path):
     # Carregar o arquivo Excel sem cabeçalhos
     df = pd.read_excel(file_path, header=None)
+
+    # Capturar a conta contábil no início, verificando a coluna E (índice 4)
+    conta_contabil = None
+    for index, row in df.iterrows():
+        if pd.notna(row[4]) and isinstance(row[4], str):  # Verifica a coluna E
+            # Remover múltiplos espaços em branco
+            row[4] = re.sub(r'\s+', ' ', row[4]).strip()
+            # Verificar se a string contém "Red.:" e extrair a conta contábil de 5 dígitos mais o dígito após o hífen
+            if "Red.:" in row[4]:
+                match = re.search(r"Red\.\:\s(\d{4})-(\d)", row[4])
+                if match:
+                    conta_contabil = match.group(1) + match.group(2)  # Concatena o valor de 4 dígitos com o dígito após o hífen
+                    print(f"Conta contábil capturada: {conta_contabil} na linha {index}")
+                    break  # Captura a conta contábil uma vez e para a busca
+
+    if conta_contabil:
+        print("Conta contábil foi capturada com sucesso.")
+    else:
+        print("Nenhuma conta contábil foi capturada.")
 
     # Inicializar índice atual
     current_index = 0
@@ -56,21 +64,32 @@ def process_excel(file_path, output_path):
     # Remover colunas em branco
     df.dropna(axis=1, how='all', inplace=True)
 
-    # Chamar a função para salvar o DataFrame intermediário após a remoção de colunas
-    salvar_dataframe_intermediario(df, "Salvar DataFrame após a remoção de colunas como")
-
     # Conferir linha a linha começando da última linha com valor na coluna B
     for i in range(len(df) - 1, 0, -1):
         if pd.notna(df.iloc[i, 1]) and pd.isna(df.iloc[i, 3]):
             df.iloc[i-1, 1] = str(df.iloc[i-1, 1]) + " " + str(df.iloc[i, 1])
+            print(df.iloc[i, 1])
             df.reset_index(drop=True, inplace=True)
             df.drop(i, inplace=True, errors='ignore')
 
     # Resetar o índice do DataFrame após as operações
     df.reset_index(drop=True, inplace=True)
 
+    # Adicionar a conta contábil em todas as linhas do DataFrame, se encontrada
+    if conta_contabil:
+        df['Conta Contábil'] = conta_contabil
+        print(f"Conta contábil '{conta_contabil}' adicionada a todas as linhas.")
+    else:
+        print("Nenhuma conta contábil adicionada às linhas.")
+
+    # Salvar o DataFrame em um arquivo com "verificação" adicionado ao nome
+    verificacao_path = os.path.splitext(output_path)[0] + "_verificacao.xlsx"
+    df.to_excel(verificacao_path, index=False, header=False)
+    print(f"Arquivo de verificação salvo como {verificacao_path}")
+
     # Salvar o DataFrame modificado em um novo arquivo Excel sem cabeçalhos
     df.to_excel(output_path, index=False, header=False)
+    print(f"Arquivo processado salvo como {output_path}")
 
 def main():
     input_file = escolher_arquivo()
@@ -88,7 +107,6 @@ def main():
         return
 
     process_excel(input_file, output_file)
-    print(f"Arquivo processado salvo como {output_file}")
 
 if __name__ == "__main__":
     main()
