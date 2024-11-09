@@ -36,7 +36,7 @@ def data():
     where_clauses = []
 
     # Lista de colunas válidas para ordenação
-    valid_columns = ['data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta']
+    valid_columns = ['id','data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta']
 
     # Captura os parâmetros de ordenação da solicitação
     order_by = request.args.get('order_by', 'id')  # Define a coluna 'data' como padrão
