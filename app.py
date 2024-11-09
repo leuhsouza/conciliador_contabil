@@ -39,7 +39,7 @@ def data():
     valid_columns = ['data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta']
 
     # Captura os parâmetros de ordenação da solicitação
-    order_by = request.args.get('order_by', 'data')  # Define a coluna 'data' como padrão
+    order_by = request.args.get('order_by', 'id')  # Define a coluna 'data' como padrão
     order_direction = request.args.get('order_direction', 'asc')  # 'asc' é o padrão
 
     # Valida o parâmetro de ordenação para evitar injeção de SQL

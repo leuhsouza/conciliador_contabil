@@ -8,3 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+function voltarParaInicio() {
+    window.location.href = '/'; // ou 'sua_pagina_home.html' se for um caminho específico
+}
