@@ -50,10 +50,16 @@
                     {{ table|safe }}
                 </tbody>
             </table>
-            <form action="/download_filtered_data" method="post">
+            <form action="/download_filtered_data" method="post" id="downloadForm">
+                <input type="hidden" name="selected_ids" id="selectedIds">
                 <input type="hidden" name="filter_field" value="{{ request.form.get('filter_field') }}">
                 <input type="hidden" name="filter_conta" value="{{ request.form.get('filter_conta') }}">
                 <button type="submit">Download Excel</button>
+            </form>
+            <form action="/download_non_highlighted" method="post">
+                <input type="hidden" name="filter_field" value="{{ request.form.get('filter_field') }}">
+                <input type="hidden" name="filter_conta" value="{{ request.form.get('filter_conta') }}">
+                <button type="submit">Download Linhas Não Marcadas</button>
             </form>
         </div>
 
@@ -66,11 +72,12 @@
     <script>
         $(document).ready(function() {
             let totalSum = 0;
-
+            let selectedIds = []; // Lista para armazenar os IDs das linhas destacadas
+    
             function updateSum(row, isAdding) {
                 let dValue = parseFloat($(row).find('td:eq(5)').text().replace(',', '.')) || 0; // Coluna D
                 let cValue = parseFloat($(row).find('td:eq(6)').text().replace(',', '.')) || 0; // Coluna C
-
+    
                 if (isAdding) {
                     totalSum += dValue;
                     totalSum -= cValue;
@@ -78,12 +85,12 @@
                     totalSum -= dValue;
                     totalSum += cValue;
                 }
-
+    
                 $('#sumValue').text(totalSum.toFixed(2));
             }
-
+    
             let selectedRow = null;
-
+    
             $('table.data tr').on('click', function() {
                 if (selectedRow) {
                     $(selectedRow).removeClass('selected');
@@ -91,23 +98,29 @@
                 selectedRow = this;
                 $(this).addClass('selected').focus();
             });
-
+    
             $('table.data tr').on('dblclick', function() {
+                let rowId = $(this).find('td:first').text(); // Supondo que o ID esteja na primeira coluna
                 if ($(this).hasClass('highlight')) {
                     updateSum(this, false);
                     $(this).removeClass('highlight');
+                    selectedIds = selectedIds.filter(id => id !== rowId); // Remove o ID da lista
                 } else {
                     updateSum(this, true);
                     $(this).addClass('highlight');
+                    selectedIds.push(rowId); // Adiciona o ID à lista
                 }
+    
+                // Atualiza o campo oculto com os IDs das linhas destacadas
+                $('#selectedIds').val(selectedIds.join(','));
             });
-
+    
             $(document).on('keydown', function(event) {
                 if (!selectedRow) return;
-
+    
                 let rows = $('table.data tr');
                 let index = rows.index(selectedRow);
-
+    
                 if (event.key === 'ArrowDown') {
                     event.preventDefault();
                     if (index < rows.length - 1) {
@@ -127,7 +140,16 @@
                     $(selectedRow).trigger('dblclick');
                 }
             });
+    
+            // Adiciona o campo oculto ao formulário de download
+            $('<input>').attr({
+                type: 'hidden',
+                id: 'selectedIds',
+                name: 'selected_ids'
+            }).appendTo('form[action="/download_filtered_data"]');
         });
     </script>
+    
+    
 </body>
 </html>

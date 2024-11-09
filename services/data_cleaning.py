@@ -134,7 +134,7 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
 
     df.dropna(how='all', inplace=True)
     df = df[df.iloc[:, 12] != 'Total:']
-    df = df[df.iloc[:, 15] != 'Transporte da página anterior:']
+    df = df[df.iloc[:, 14] != 'Transporte da página anterior:']
     df.dropna(axis=1, how='all', inplace=True)
 
     # Verificar e unir linhas com base na coluna A (índice 0)
