@@ -265,16 +265,23 @@ def save_conciliation():
     data = request.get_json()
     ids = data.get('ids', [])
 
-    if not ids:
-        return jsonify(success=False, message="Nenhuma linha foi selecionada para conciliação.")
-
     conn = sqlite3.connect('database.sqlite')
     cursor = conn.cursor()
 
     try:
         # Atualiza as linhas para marcar como conciliadas
-        query = "UPDATE dados SET conciliada = 1 WHERE id IN ({})".format(','.join('?' * len(ids)))
-        cursor.execute(query, ids)
+        if ids:
+            # Marca como conciliadas as linhas com IDs na lista
+            query = "UPDATE dados SET conciliada = 1 WHERE id IN ({})".format(','.join('?' * len(ids)))
+            cursor.execute(query, ids)
+
+            # Marca como não conciliadas as linhas que não estão na lista de IDs selecionados
+            query_unselected = "UPDATE dados SET conciliada = 0 WHERE id NOT IN ({})".format(','.join('?' * len(ids)))
+            cursor.execute(query_unselected, ids)
+        else:
+            # Se não houver IDs selecionados, marca todas as linhas como não conciliadas
+            cursor.execute("UPDATE dados SET conciliada = 0")
+
         conn.commit()
         conn.close()
 
@@ -282,6 +289,7 @@ def save_conciliation():
     except Exception as e:
         conn.close()
         return jsonify(success=False, message=f"Erro ao salvar a conciliação: {str(e)}")
+
 
 
 
