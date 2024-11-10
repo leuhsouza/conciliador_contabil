@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Função para retornar à página inicial
     function voltarParaInicio() {
-        window.location.href = '/';
+        window.location.href = 'index.html';
     }
 
     // Lógica de soma e destaque de linhas
