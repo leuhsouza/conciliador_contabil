@@ -18,10 +18,9 @@
             margin-left: 20px;
         }
     </style>
-    <script src="static/script.js"></script>
 </head>
 <body>
-    <button onclick="voltarParaInicio()">Voltar para Início</button>
+    <button id="voltarParaInicio">Voltar para Início</button>
     <form method="post">
         <label for="filter_field">Filtro por Histórico:</label>
         <input type="text" id="filter_field" name="filter_field">
@@ -49,7 +48,8 @@
                 </thead>
                 <tbody>
                     {% for row in data_list %}
-                        <tr class="{{ 'highlight' if row['conciliada'] == 1 else '' }}">
+                        <tr data-conciliated="{{ 1 if row['conciliada'] == 1 else 0 }}" class="{{ 'highlight' if row['conciliada'] == 1 else '' }}">
+                        
                             {% for col in columns %}
                                 <td>{{ row[col] }}</td>
                             {% endfor %}
@@ -69,7 +69,6 @@
                 <button type="submit">Download Linhas Não Marcadas</button>
             </form>
         </div>
-        
 
         <!-- Painel para mostrar a soma -->
         <div id="sumPanel">
@@ -77,116 +76,7 @@
         </div>
     </div>
 
-    <script>
-        $(document).ready(function() {
-            let totalSum = 0;
-            let selectedIds = []; // Lista para armazenar os IDs das linhas destacadas
-    
-            function updateSum(row, isAdding) {
-                let dValue = parseFloat($(row).find('td:eq(5)').text().replace(',', '.')) || 0; // Coluna D
-                let cValue = parseFloat($(row).find('td:eq(6)').text().replace(',', '.')) || 0; // Coluna C
-    
-                if (isAdding) {
-                    totalSum += dValue;
-                    totalSum -= cValue;
-                } else {
-                    totalSum -= dValue;
-                    totalSum += cValue;
-                }
-    
-                $('#sumValue').text(totalSum.toFixed(2));
-            }
-    
-            let selectedRow = null;
-    
-            $('table.data tr').on('click', function() {
-                if (selectedRow) {
-                    $(selectedRow).removeClass('selected');
-                }
-                selectedRow = this;
-                $(this).addClass('selected').focus();
-            });
-    
-            $('table.data tr').on('dblclick', function() {
-                let rowId = $(this).find('td:first').text(); // Supondo que o ID esteja na primeira coluna
-                if ($(this).hasClass('highlight')) {
-                    updateSum(this, false);
-                    $(this).removeClass('highlight');
-                    selectedIds = selectedIds.filter(id => id !== rowId); // Remove o ID da lista
-                } else {
-                    updateSum(this, true);
-                    $(this).addClass('highlight');
-                    selectedIds.push(rowId); // Adiciona o ID à lista
-                }
-    
-                // Atualiza o campo oculto com os IDs das linhas destacadas
-                $('#selectedIds').val(selectedIds.join(','));
-            });
-    
-            $(document).on('keydown', function(event) {
-                if (!selectedRow) return;
-    
-                let rows = $('table.data tr');
-                let index = rows.index(selectedRow);
-    
-                if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    if (index < rows.length - 1) {
-                        $(selectedRow).removeClass('selected');
-                        selectedRow = rows.get(index + 1);
-                        $(selectedRow).addClass('selected').focus();
-                    }
-                } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    if (index > 0) {
-                        $(selectedRow).removeClass('selected');
-                        selectedRow = rows.get(index - 1);
-                        $(selectedRow).addClass('selected').focus();
-                    }
-                } else if (event.key === 'Enter') {
-                    event.preventDefault();
-                    $(selectedRow).trigger('dblclick');
-                }
-            });
-    
-            // Adiciona o campo oculto ao formulário de download
-            $('<input>').attr({
-                type: 'hidden',
-                id: 'selectedIds',
-                name: 'selected_ids'
-            }).appendTo('form[action="/download_filtered_data"]');
-        });
-
-
-        function saveConciliation() {
-        let selectedIds = [];
-        $('table.data tr.highlight').each(function() {
-            let id = $(this).find('td:first').text(); // Supondo que a primeira coluna seja o ID
-            if (id) {
-                selectedIds.push(id.trim());
-            }
-        });
-
-        if (selectedIds.length > 0) {
-            $.ajax({
-                url: '/save_conciliation',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ ids: selectedIds }),
-                success: function(response) {
-                    alert('Conciliação salva com sucesso!');
-                },
-                error: function() {
-                    alert('Erro ao salvar a conciliação.');
-                }
-            });
-        } else {
-            alert('Nenhuma linha selecionada para conciliação.');
-        }
-    }
-        
-    </script>
-    
-    
+    <!-- Inclua o arquivo de script apenas uma vez -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
