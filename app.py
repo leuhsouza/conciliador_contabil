@@ -179,7 +179,6 @@ from flask import send_file
 def download_filtered_data():
     filter_value = request.form.get('filter_field')
     filter_conta = request.form.get('filter_conta')
-    selected_ids = request.form.get('selected_ids').split(',')
 
     conn = sqlite3.connect('database.sqlite')
     query = "SELECT * FROM dados"
@@ -210,28 +209,25 @@ def download_filtered_data():
         workbook = writer.book
         worksheet = writer.sheets['FilteredData']
 
-        # Formatação para as linhas destacadas
+        # Formatação para as células destacadas
         highlighted_format = workbook.add_format({'bg_color': 'yellow'})
 
-        # Obter o índice da coluna "conta"
-        last_col_index = df.columns.get_loc('conta')
-
-        # Destacar as linhas selecionadas apenas até a coluna "conta"
-        for row_num, row_id in enumerate(df['id'], start=1):
-            if str(row_id) in selected_ids:
-                worksheet.set_row(row_num, None, None)  # Define a altura padrão da linha
-                for col_num in range(last_col_index + 1):  # Itera até a coluna "conta"
+        # Destacar as células de linhas que têm a coluna 'conciliada' igual a True ou 1
+        for row_num, value in enumerate(df['conciliada'], start=1):  # Começa em 1 para pular o cabeçalho
+            if value == 1 or value is True:
+                for col_num in range(len(df.columns)):
                     worksheet.write(row_num, col_num, df.iloc[row_num - 1, col_num], highlighted_format)
 
     return send_file(output_path, as_attachment=True)
 
-@app.route('/download_non_highlighted', methods=['POST'])
-def download_non_highlighted():
+
+@app.route('/download_non_conciliated', methods=['POST'])
+def download_non_conciliated():
     filter_value = request.form.get('filter_field')
     filter_conta = request.form.get('filter_conta')
 
     conn = sqlite3.connect('database.sqlite')
-    query = "SELECT * FROM dados"
+    query = "SELECT * FROM dados WHERE conciliada = 0"
     filters = []
     where_clauses = []
 
@@ -244,7 +240,7 @@ def download_non_highlighted():
         filters.append(f"%{filter_conta}%")
 
     if where_clauses:
-        query += f" WHERE {' AND '.join(where_clauses)}"
+        query += f" AND {' AND '.join(where_clauses)}"
 
     df = pd.read_sql_query(query, conn, params=filters)
     conn.close()
@@ -252,13 +248,14 @@ def download_non_highlighted():
     if df.empty:
         return "Nenhum dado encontrado com os filtros aplicados."
 
-    # Filtrar as linhas não destacadas (supondo que a coluna 'highlighted' não exista no DataFrame)
-    df_non_highlighted = df[~df.index.isin([])]  # Placeholder para lógica de não destacar
-
     # Salvar o DataFrame em um arquivo Excel
-    output_path = 'non_highlighted_data.xlsx'
+    output_path = 'non_conciliated_data.xlsx'
     with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
-        df_non_highlighted.to_excel(writer, index=False, sheet_name='NonHighlightedData')
+        df.to_excel(writer, index=False, sheet_name='NonConciliatedData')
+        workbook = writer.book
+        worksheet = writer.sheets['NonConciliatedData']
+
+        # Formatação opcional pode ser adicionada aqui se necessário
 
     return send_file(output_path, as_attachment=True)
 

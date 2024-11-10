@@ -63,7 +63,7 @@
                 <input type="hidden" name="filter_conta" value="{{ request.form.get('filter_conta') }}">
                 <button type="submit">Download Excel</button>
             </form>
-            <form action="/download_non_highlighted" method="post">
+            <form action="/download_non_conciliated" method="post">
                 <input type="hidden" name="filter_field" value="{{ request.form.get('filter_field') }}">
                 <input type="hidden" name="filter_conta" value="{{ request.form.get('filter_conta') }}">
                 <button type="submit">Download Linhas Não Marcadas</button>
