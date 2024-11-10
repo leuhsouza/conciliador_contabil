@@ -36,15 +36,15 @@ def data():
     where_clauses = []
 
     # Lista de colunas válidas para ordenação
-    valid_columns = ['id','data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta']
+    valid_columns = ['id', 'data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta', 'conciliado']
 
     # Captura os parâmetros de ordenação da solicitação
-    order_by = request.args.get('order_by', 'id')  # Define a coluna 'data' como padrão
+    order_by = request.args.get('order_by', 'id')  # Define a coluna 'id' como padrão
     order_direction = request.args.get('order_direction', 'asc')  # 'asc' é o padrão
 
     # Valida o parâmetro de ordenação para evitar injeção de SQL
     if order_by not in valid_columns:
-        order_by = 'data'  # Redefine para a coluna padrão se o parâmetro for inválido
+        order_by = 'id'  # Redefine para a coluna padrão se o parâmetro for inválido
 
     # Valida a direção da ordenação
     if order_direction.lower() not in ['asc', 'desc']:
@@ -68,11 +68,19 @@ def data():
         if where_clauses:
             query = query.replace('ORDER BY', f"WHERE {' AND '.join(where_clauses)} ORDER BY")
 
+    # Executar a consulta SQL e carregar os dados em um DataFrame
     df = pd.read_sql_query(query, conn, params=filters)
     conn.close()
 
-    table_html = df.to_html(classes='data', index=False)
-    return render_template('data.html', table=table_html)
+    if df.empty:
+        return render_template('data.html', data_list=[], columns=[])
+
+    # Passar o DataFrame como uma lista de dicionários para o template
+    data_list = df.to_dict(orient='records')
+    columns = df.columns.tolist()
+
+    return render_template('data.html', data_list=data_list, columns=columns)
+
 
 
 @app.route('/pix', methods=['GET', 'POST'])
@@ -253,6 +261,30 @@ def download_non_highlighted():
         df_non_highlighted.to_excel(writer, index=False, sheet_name='NonHighlightedData')
 
     return send_file(output_path, as_attachment=True)
+
+
+@app.route('/save_conciliation', methods=['POST'])
+def save_conciliation():
+    data = request.get_json()
+    ids = data.get('ids', [])
+
+    if not ids:
+        return jsonify(success=False, message="Nenhuma linha foi selecionada para conciliação.")
+
+    conn = sqlite3.connect('database.sqlite')
+    cursor = conn.cursor()
+
+    try:
+        # Atualiza as linhas para marcar como conciliadas
+        query = "UPDATE dados SET conciliada = 1 WHERE id IN ({})".format(','.join('?' * len(ids)))
+        cursor.execute(query, ids)
+        conn.commit()
+        conn.close()
+
+        return jsonify(success=True, message="Conciliação salva com sucesso.")
+    except Exception as e:
+        conn.close()
+        return jsonify(success=False, message=f"Erro ao salvar a conciliação: {str(e)}")
 
 
 

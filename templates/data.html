@@ -32,6 +32,7 @@
         <button type="submit">Aplicar Filtro</button>
     </form>
     <h1>Dados</h1>
+    <button id="saveConciliation" onclick="saveConciliation()">Salvar Conciliação</button>
     <div style="display: flex;">
         <div>
             <table class="data">
@@ -47,7 +48,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{ table|safe }}
+                    {% for row in data_list %}
+                        <tr class="{{ 'highlight' if row['conciliada'] == 1 else '' }}">
+                            {% for col in columns %}
+                                <td>{{ row[col] }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
                 </tbody>
             </table>
             <form action="/download_filtered_data" method="post" id="downloadForm">
@@ -62,6 +69,7 @@
                 <button type="submit">Download Linhas Não Marcadas</button>
             </form>
         </div>
+        
 
         <!-- Painel para mostrar a soma -->
         <div id="sumPanel">
@@ -148,6 +156,35 @@
                 name: 'selected_ids'
             }).appendTo('form[action="/download_filtered_data"]');
         });
+
+
+        function saveConciliation() {
+        let selectedIds = [];
+        $('table.data tr.highlight').each(function() {
+            let id = $(this).find('td:first').text(); // Supondo que a primeira coluna seja o ID
+            if (id) {
+                selectedIds.push(id.trim());
+            }
+        });
+
+        if (selectedIds.length > 0) {
+            $.ajax({
+                url: '/save_conciliation',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ ids: selectedIds }),
+                success: function(response) {
+                    alert('Conciliação salva com sucesso!');
+                },
+                error: function() {
+                    alert('Erro ao salvar a conciliação.');
+                }
+            });
+        } else {
+            alert('Nenhuma linha selecionada para conciliação.');
+        }
+    }
+        
     </script>
     
     
