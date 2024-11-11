@@ -1,7 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Lógica de soma e destaque de linhas
+    // Inicializa a soma total com base nos valores conciliados na tela
     let totalSum = 0;
     let selectedIds = []; // Lista para armazenar os IDs das linhas destacadas
+
+    // Calcula a soma inicial com base nas linhas conciliadas (classe 'highlight')
+    document.querySelectorAll('table.data tr.highlight').forEach(function(row) {
+        const dValue = parseFloat(row.querySelector('td:nth-child(7)').textContent.replace(',', '.')) || 0; // Coluna D
+        const cValue = parseFloat(row.querySelector('td:nth-child(8)').textContent.replace(',', '.')) || 0; // Coluna C
+        totalSum += dValue - cValue;
+    });
+    document.getElementById('sumValue').textContent = totalSum.toFixed(2);
 
     function updateSum(row, isAdding) {
         const dValue = parseFloat(row.querySelector('td:nth-child(7)').textContent.replace(',', '.')) || 0; // Coluna D
@@ -78,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
 function saveConciliation() {
     let selectedIds = [];
     let allIds = [];
@@ -85,7 +94,7 @@ function saveConciliation() {
     // Captura os IDs de todas as linhas exibidas na tabela
     document.querySelectorAll('table.data tr').forEach(function(row) {
         const idElement = row.querySelector('td:first-child');
-        if (idElement) { // Verifica se idElement não é null
+        if (idElement) {
             const id = idElement.textContent;
             if (id) {
                 allIds.push(id.trim());
@@ -130,7 +139,6 @@ function removeConciliation() {
         const historico = row.querySelector('td:nth-child(3)')?.textContent || '';
         const conta = row.querySelector('td:nth-child(10)')?.textContent || ''; // Ajustar conforme o índice da coluna
 
-        // Verifica se a linha corresponde aos filtros aplicados
         if ((filterField === '' || historico.includes(filterField)) &&
             (filterConta === '' || conta.includes(filterConta))) {
             row.classList.remove('highlight');

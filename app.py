@@ -51,27 +51,28 @@ def data():
     valid_columns = ['id', 'data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta', 'conciliado']
 
     # Captura os parâmetros de ordenação da solicitação
-    order_by = request.args.get('order_by', 'id')
-    order_direction = request.args.get('order_direction', 'asc')
+    order_by = request.args.get('order_by', 'id')  # Define a coluna 'id' como padrão
+    order_direction = request.args.get('order_direction', 'asc')  # 'asc' é o padrão
 
+    # Valida o parâmetro de ordenação para evitar injeção de SQL
     if order_by not in valid_columns:
-        order_by = 'id'
-    if order_direction.lower() not in ['asc', 'desc']:
-        order_direction = 'asc'
+        order_by = 'id'  # Redefine para a coluna padrão se o parâmetro for inválido
 
+    # Valida a direção da ordenação
+    if order_direction.lower() not in ['asc', 'desc']:
+        order_direction = 'asc'  # Redefine para ascendente se o parâmetro for inválido
+
+    # Adiciona a cláusula ORDER BY à consulta SQL
     query += f" ORDER BY {order_by} {order_direction.upper()}"
 
     if request.method == 'POST':
-        filter_field = request.form.get('filter_field')
+        filter_value = request.form.get('filter_field')
         filter_conta = request.form.get('filter_conta')
 
-        # Salvar os filtros na sessão
-        session['filter_field'] = filter_field
-        session['filter_conta'] = filter_conta
-
-        if filter_field:
+        if filter_value:
             where_clauses.append("historico LIKE ?")
-            filters.append(f"%{filter_field}%")
+            filters.append(f"%{filter_value}%")
+
         if filter_conta:
             where_clauses.append("conta LIKE ?")
             filters.append(f"%{filter_conta}%")
@@ -83,12 +84,17 @@ def data():
     conn.close()
 
     if df.empty:
-        return render_template('data.html', data_list=[], columns=[])
+        return render_template('data.html', data_list=[], columns=[], initial_sum=0)
+
+    # Calcular a soma inicial dos valores conciliados
+    df['d'] = pd.to_numeric(df['d'], errors='coerce').fillna(0)
+    df['c'] = pd.to_numeric(df['c'], errors='coerce').fillna(0)
+    initial_sum = (df[df['conciliada'] == 1]['d'].sum() - df[df['conciliada'] == 1]['c'].sum())
 
     data_list = df.to_dict(orient='records')
     columns = df.columns.tolist()
 
-    return render_template('data.html', data_list=data_list, columns=columns)
+    return render_template('data.html', data_list=data_list, columns=columns, initial_sum=initial_sum)
 
 
 
