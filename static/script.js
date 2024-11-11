@@ -96,36 +96,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Função para salvar a conciliação
-    const saveConciliationBtn = document.getElementById('saveConciliation');
-    if (saveConciliationBtn) {
-        saveConciliationBtn.addEventListener('click', function() {
-            let selectedIds = [];
-            document.querySelectorAll('table.data tr.highlight').forEach(function(row) {
-                const id = row.querySelector('td:first-child').textContent; // Supondo que a primeira coluna seja o ID
-                if (id) {
-                    selectedIds.push(id.trim());
-                }
-            });
-
-            if (selectedIds.length > 0) {
-                fetch('/save_conciliation', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ ids: selectedIds })
-                })
-                .then(response => response.text())
-                .then(() => {
-                    alert('Conciliação salva com sucesso!');
-                })
-                .catch(() => {
-                    alert('Erro ao salvar a conciliação.');
-                });
-            } else {
-                alert('Nenhuma linha selecionada para conciliação.');
+// Função para salvar a conciliação
+const saveConciliationBtn = document.getElementById('saveConciliation');
+if (saveConciliationBtn) {
+    saveConciliationBtn.addEventListener('click', function() {
+        let selectedIds = [];
+        document.querySelectorAll('table.data tr.highlight').forEach(function(row) {
+            const id = row.querySelector('td:first-child').textContent; // Supondo que a primeira coluna seja o ID
+            if (id) {
+                selectedIds.push(id.trim());
             }
         });
-    }
+
+        if (selectedIds.length > 0) {
+            fetch('/save_conciliation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ ids: selectedIds })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Conciliação salva com sucesso!');
+                    // Recarregar a página para mostrar as atualizações
+                    window.location.reload();
+                } else {
+                    alert('Erro ao salvar a conciliação: ' + data.message);
+                }
+            })
+            .catch(() => {
+                alert('Erro ao salvar a conciliação.');
+            });
+        } else {
+            alert('Nenhuma linha selecionada para conciliação.');
+        }
+    });
+}
 });
