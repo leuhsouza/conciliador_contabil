@@ -135,3 +135,29 @@ if (saveConciliationBtn) {
     });
 }
 });
+
+// Certifique-se de que esta função está definida em um escopo global
+function removeConciliation() {
+    const filterField = document.getElementById('filter_field').value;
+    const filterConta = document.getElementById('filter_conta').value;
+
+    fetch('/remove_conciliation', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ filter_field: filterField, filter_conta: filterConta })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Conciliação removida com sucesso!');
+            window.location.reload(); // Atualiza a página para mostrar as alterações
+        } else {
+            alert('Erro ao remover a conciliação: ' + data.message);
+        }
+    })
+    .catch(() => {
+        alert('Erro ao remover a conciliação.');
+    });
+}

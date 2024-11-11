@@ -290,6 +290,40 @@ def save_conciliation():
         conn.close()
         return jsonify(success=False, message=f"Erro ao salvar a conciliação: {str(e)}")
 
+@app.route('/remove_conciliation', methods=['POST'])
+def remove_conciliation():
+    data = request.get_json()
+    filter_value = data.get('filter_field', '')
+    filter_conta = data.get('filter_conta', '')
+
+    conn = sqlite3.connect('database.sqlite')
+    cursor = conn.cursor()
+
+    try:
+        # Montar a query de remoção com base nos filtros aplicados
+        query = "UPDATE dados SET conciliada = 0"
+        params = []
+        where_clauses = []
+
+        if filter_value:
+            where_clauses.append("historico LIKE ?")
+            params.append(f"%{filter_value}%")
+
+        if filter_conta:
+            where_clauses.append("conta LIKE ?")
+            params.append(f"%{filter_conta}%")
+
+        if where_clauses:
+            query += f" WHERE {' AND '.join(where_clauses)}"
+
+        cursor.execute(query, params)
+        conn.commit()
+        conn.close()
+
+        return jsonify(success=True, message="Conciliação removida com sucesso.")
+    except Exception as e:
+        conn.close()
+        return jsonify(success=False, message=f"Erro ao remover a conciliação: {str(e)}")
 
 
 
