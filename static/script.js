@@ -134,6 +134,7 @@ function saveConciliation() {
 function removeConciliation() {
     const filterField = document.getElementById('filter_field').value.trim();
     const filterConta = document.getElementById('filter_conta').value.trim();
+    let rowsUpdated = false; // Verifica se alguma linha foi atualizada
 
     document.querySelectorAll('table.data tr').forEach(row => {
         const historico = row.querySelector('td:nth-child(3)')?.textContent || '';
@@ -141,9 +142,18 @@ function removeConciliation() {
 
         if ((filterField === '' || historico.includes(filterField)) &&
             (filterConta === '' || conta.includes(filterConta))) {
-            row.classList.remove('highlight');
+            if (row.classList.contains('highlight')) {
+                row.classList.remove('highlight');
+                rowsUpdated = true; // Marca que houve atualização
+            }
         }
     });
+
+    // Se todas as linhas destacadas forem removidas, zera a soma
+    if (rowsUpdated) {
+        totalSum = 0; // Zera a soma total
+        document.getElementById('sumValue').textContent = totalSum.toFixed(2);
+    }
 
     alert('Conciliação removida visualmente. Para salvar as alterações, clique em "Salvar Conciliação".');
 }

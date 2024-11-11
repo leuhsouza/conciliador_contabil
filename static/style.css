@@ -44,7 +44,7 @@ table.data th {
     position: sticky;
     top: 10px; /* Mantém o painel fixo no topo durante a rolagem */
     display: block;
-    width: 200px; /* Ajuste conforme necessário */
+    width: 250px; /* Ajuste conforme necessário */
     max-height: 100px; /* Defina a altura máxima desejada */
     overflow-y: auto; /* Permite rolagem interna se o conteúdo for maior */
     background-color: #f1f1f1; /* Cor de fundo opcional */
