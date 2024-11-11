@@ -1,11 +1,23 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, make_response
+from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, make_response,session
 import sqlite3
 import pandas as pd
 from services.data_cleaning import process_excel, process_excel_varias_contas
 from services.pixtxt import processar_lancamentos
-import io
+import os
+from dotenv import load_dotenv
+
+
+# Carregar variáveis de ambiente do arquivo .env
+load_dotenv()
 
 app = Flask(__name__)
+
+
+# Defina a chave secreta a partir da variável de ambiente
+app.secret_key = os.getenv('SECRET_KEY')
+
+if not app.secret_key:
+    raise RuntimeError("A chave secreta não foi configurada. Verifique as variáveis de ambiente.")
 
 @app.route('/')
 def index():
@@ -39,28 +51,27 @@ def data():
     valid_columns = ['id', 'data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta', 'conciliado']
 
     # Captura os parâmetros de ordenação da solicitação
-    order_by = request.args.get('order_by', 'id')  # Define a coluna 'id' como padrão
-    order_direction = request.args.get('order_direction', 'asc')  # 'asc' é o padrão
+    order_by = request.args.get('order_by', 'id')
+    order_direction = request.args.get('order_direction', 'asc')
 
-    # Valida o parâmetro de ordenação para evitar injeção de SQL
     if order_by not in valid_columns:
-        order_by = 'id'  # Redefine para a coluna padrão se o parâmetro for inválido
-
-    # Valida a direção da ordenação
+        order_by = 'id'
     if order_direction.lower() not in ['asc', 'desc']:
-        order_direction = 'asc'  # Redefine para ascendente se o parâmetro for inválido
+        order_direction = 'asc'
 
-    # Adiciona a cláusula ORDER BY à consulta SQL
     query += f" ORDER BY {order_by} {order_direction.upper()}"
 
     if request.method == 'POST':
-        filter_value = request.form.get('filter_field')
+        filter_field = request.form.get('filter_field')
         filter_conta = request.form.get('filter_conta')
 
-        if filter_value:
-            where_clauses.append("historico LIKE ?")
-            filters.append(f"%{filter_value}%")
+        # Salvar os filtros na sessão
+        session['filter_field'] = filter_field
+        session['filter_conta'] = filter_conta
 
+        if filter_field:
+            where_clauses.append("historico LIKE ?")
+            filters.append(f"%{filter_field}%")
         if filter_conta:
             where_clauses.append("conta LIKE ?")
             filters.append(f"%{filter_conta}%")
@@ -68,14 +79,12 @@ def data():
         if where_clauses:
             query = query.replace('ORDER BY', f"WHERE {' AND '.join(where_clauses)} ORDER BY")
 
-    # Executar a consulta SQL e carregar os dados em um DataFrame
     df = pd.read_sql_query(query, conn, params=filters)
     conn.close()
 
     if df.empty:
         return render_template('data.html', data_list=[], columns=[])
 
-    # Passar o DataFrame como uma lista de dicionários para o template
     data_list = df.to_dict(orient='records')
     columns = df.columns.tolist()
 
@@ -292,40 +301,40 @@ def save_conciliation():
 
 @app.route('/remove_conciliation', methods=['POST'])
 def remove_conciliation():
+    # Pega os filtros diretamente da solicitação ou da sessão
     data = request.get_json()
-    filter_value = data.get('filter_field', '')
-    filter_conta = data.get('filter_conta', '')
+    filter_field = data.get('filter_field', '').strip() or session.get('filter_field', '').strip()
+    filter_conta = data.get('filter_conta', '').strip() or session.get('filter_conta', '').strip()
+
+    # Verifique se pelo menos um filtro está presente
+    if not filter_field and not filter_conta:
+        return jsonify(success=False, message="Nenhum filtro foi aplicado para a remoção da conciliação.")
 
     conn = sqlite3.connect('database.sqlite')
     cursor = conn.cursor()
 
     try:
-        # Montar a query de remoção com base nos filtros aplicados
-        query = "UPDATE dados SET conciliada = 0"
-        params = []
         where_clauses = []
+        params = []
 
-        if filter_value:
+        if filter_field:
             where_clauses.append("historico LIKE ?")
-            params.append(f"%{filter_value}%")
+            params.append(f"%{filter_field}%")
 
         if filter_conta:
             where_clauses.append("conta LIKE ?")
             params.append(f"%{filter_conta}%")
 
         if where_clauses:
-            query += f" WHERE {' AND '.join(where_clauses)}"
+            query = f"UPDATE dados SET conciliada = 0 WHERE {' AND '.join(where_clauses)}"
+            cursor.execute(query, params)
+            conn.commit()
 
-        cursor.execute(query, params)
-        conn.commit()
         conn.close()
-
         return jsonify(success=True, message="Conciliação removida com sucesso.")
     except Exception as e:
         conn.close()
         return jsonify(success=False, message=f"Erro ao remover a conciliação: {str(e)}")
-
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

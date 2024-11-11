@@ -136,10 +136,10 @@ if (saveConciliationBtn) {
 }
 });
 
-// Certifique-se de que esta função está definida em um escopo global
 function removeConciliation() {
-    const filterField = document.getElementById('filter_field').value;
-    const filterConta = document.getElementById('filter_conta').value;
+    // Certifique-se de que os valores dos campos de filtro estão sendo capturados corretamente
+    const filterField = document.getElementById('filter_field').value.trim();
+    const filterConta = document.getElementById('filter_conta').value.trim();
 
     fetch('/remove_conciliation', {
         method: 'POST',
