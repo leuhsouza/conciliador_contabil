@@ -272,65 +272,69 @@ def download_non_conciliated():
 @app.route('/save_conciliation', methods=['POST'])
 def save_conciliation():
     data = request.get_json()
-    ids = data.get('ids', [])
+    selected_ids = data.get('ids', [])  # IDs das linhas que estão selecionadas
+    all_ids = data.get('all_ids', [])  # IDs de todas as linhas filtradas ou mostradas
 
-    conn = sqlite3.connect('database.sqlite')
-    cursor = conn.cursor()
+    if not all_ids:
+        return jsonify(success=False, message="Nenhuma linha foi encontrada para conciliação.")
+
+    if not isinstance(all_ids, list) or not isinstance(selected_ids, list):
+        return jsonify(success=False, message="Formato de dados inválido para IDs.")
 
     try:
-        # Atualiza as linhas para marcar como conciliadas
-        if ids:
-            # Marca como conciliadas as linhas com IDs na lista
-            query = "UPDATE dados SET conciliada = 1 WHERE id IN ({})".format(','.join('?' * len(ids)))
-            cursor.execute(query, ids)
+        with sqlite3.connect('database.sqlite') as conn:
+            cursor = conn.cursor()
 
-            # Marca como não conciliadas as linhas que não estão na lista de IDs selecionados
-            query_unselected = "UPDATE dados SET conciliada = 0 WHERE id NOT IN ({})".format(','.join('?' * len(ids)))
-            cursor.execute(query_unselected, ids)
-        else:
-            # Se não houver IDs selecionados, marca todas as linhas como não conciliadas
-            cursor.execute("UPDATE dados SET conciliada = 0")
+            # Atualizar todas as linhas exibidas para conciliada = 0 (não selecionadas)
+            if all_ids:
+                query_reset = f"UPDATE dados SET conciliada = 0 WHERE id IN ({','.join('?' * len(all_ids))})"
+                cursor.execute(query_reset, all_ids)
 
-        conn.commit()
-        conn.close()
+            # Atualizar apenas as linhas selecionadas para conciliada = 1
+            if selected_ids:
+                query_set = f"UPDATE dados SET conciliada = 1 WHERE id IN ({','.join('?' * len(selected_ids))})"
+                cursor.execute(query_set, selected_ids)
+
+            conn.commit()
 
         return jsonify(success=True, message="Conciliação salva com sucesso.")
     except Exception as e:
-        conn.close()
         return jsonify(success=False, message=f"Erro ao salvar a conciliação: {str(e)}")
+
+
 
 @app.route('/remove_conciliation', methods=['POST'])
 def remove_conciliation():
-    # Pega os filtros diretamente da solicitação ou da sessão
     data = request.get_json()
-    filter_field = data.get('filter_field', '').strip() or session.get('filter_field', '').strip()
-    filter_conta = data.get('filter_conta', '').strip() or session.get('filter_conta', '').strip()
-
-    # Verifique se pelo menos um filtro está presente
-    if not filter_field and not filter_conta:
-        return jsonify(success=False, message="Nenhum filtro foi aplicado para a remoção da conciliação.")
+    filter_field = data.get('filter_field', '').strip()
+    filter_conta = data.get('filter_conta', '').strip()
 
     conn = sqlite3.connect('database.sqlite')
     cursor = conn.cursor()
 
     try:
-        where_clauses = []
-        params = []
+        if filter_field or filter_conta:
+            # Remover a conciliação das linhas que correspondem aos filtros
+            where_clauses = []
+            params = []
 
-        if filter_field:
-            where_clauses.append("historico LIKE ?")
-            params.append(f"%{filter_field}%")
+            if filter_field:
+                where_clauses.append("historico LIKE ?")
+                params.append(f"%{filter_field}%")
 
-        if filter_conta:
-            where_clauses.append("conta LIKE ?")
-            params.append(f"%{filter_conta}%")
+            if filter_conta:
+                where_clauses.append("conta LIKE ?")
+                params.append(f"%{filter_conta}%")
 
-        if where_clauses:
             query = f"UPDATE dados SET conciliada = 0 WHERE {' AND '.join(where_clauses)}"
             cursor.execute(query, params)
-            conn.commit()
+        else:
+            # Se não houver filtro, remover a conciliação de todas as linhas
+            cursor.execute("UPDATE dados SET conciliada = 0")
 
+        conn.commit()  # Commit temporário para refletir a mudança visualmente, mas sem salvar
         conn.close()
+
         return jsonify(success=True, message="Conciliação removida com sucesso.")
     except Exception as e:
         conn.close()

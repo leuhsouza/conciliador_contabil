@@ -1,22 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Lógica para mostrar ou esconder opções baseadas no tipo selecionado
-    const tipoElement = document.getElementById('tipo');
-    if (tipoElement) {
-        tipoElement.addEventListener('change', function() {
-            const opcaoRazao = document.getElementById('opcaoRazao');
-            if (this.value === 'Razao') {
-                opcaoRazao.classList.remove('hidden');
-            } else {
-                opcaoRazao.classList.add('hidden');
-            }
-        });
-    }
-
-    // Função para retornar à página inicial
-    function voltarParaInicio() {
-        window.location.href = 'index.html';
-    }
-
     // Lógica de soma e destaque de linhas
     let totalSum = 0;
     let selectedIds = []; // Lista para armazenar os IDs das linhas destacadas
@@ -95,69 +77,65 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedRow.dispatchEvent(new Event('dblclick'));
         }
     });
+});
+function saveConciliation() {
+    let selectedIds = [];
+    let allIds = [];
 
-// Função para salvar a conciliação
-const saveConciliationBtn = document.getElementById('saveConciliation');
-if (saveConciliationBtn) {
-    saveConciliationBtn.addEventListener('click', function() {
-        let selectedIds = [];
-        document.querySelectorAll('table.data tr.highlight').forEach(function(row) {
-            const id = row.querySelector('td:first-child').textContent; // Supondo que a primeira coluna seja o ID
+    // Captura os IDs de todas as linhas exibidas na tabela
+    document.querySelectorAll('table.data tr').forEach(function(row) {
+        const idElement = row.querySelector('td:first-child');
+        if (idElement) { // Verifica se idElement não é null
+            const id = idElement.textContent;
             if (id) {
-                selectedIds.push(id.trim());
-            }
-        });
-
-        if (selectedIds.length > 0) {
-            fetch('/save_conciliation', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ ids: selectedIds })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Conciliação salva com sucesso!');
-                    // Recarregar a página para mostrar as atualizações
-                    window.location.reload();
-                } else {
-                    alert('Erro ao salvar a conciliação: ' + data.message);
+                allIds.push(id.trim());
+                if (row.classList.contains('highlight')) {
+                    selectedIds.push(id.trim());
                 }
-            })
-            .catch(() => {
-                alert('Erro ao salvar a conciliação.');
-            });
-        } else {
-            alert('Nenhuma linha selecionada para conciliação.');
+            }
         }
     });
-}
-});
 
+    if (allIds.length > 0) {
+        fetch('/save_conciliation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ids: selectedIds, all_ids: allIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Conciliação salva com sucesso!');
+                window.location.reload(); // Atualiza a página para mostrar as alterações
+            } else {
+                alert('Erro ao salvar a conciliação: ' + data.message);
+            }
+        })
+        .catch(() => {
+            alert('Erro ao salvar a conciliação.');
+        });
+    } else {
+        alert('Nenhuma linha encontrada para salvar.');
+    }
+}
+
+// Função para remover a conciliação das linhas filtradas (apenas visual)
 function removeConciliation() {
-    // Certifique-se de que os valores dos campos de filtro estão sendo capturados corretamente
     const filterField = document.getElementById('filter_field').value.trim();
     const filterConta = document.getElementById('filter_conta').value.trim();
 
-    fetch('/remove_conciliation', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ filter_field: filterField, filter_conta: filterConta })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Conciliação removida com sucesso!');
-            window.location.reload(); // Atualiza a página para mostrar as alterações
-        } else {
-            alert('Erro ao remover a conciliação: ' + data.message);
+    document.querySelectorAll('table.data tr').forEach(row => {
+        const historico = row.querySelector('td:nth-child(3)')?.textContent || '';
+        const conta = row.querySelector('td:nth-child(10)')?.textContent || ''; // Ajustar conforme o índice da coluna
+
+        // Verifica se a linha corresponde aos filtros aplicados
+        if ((filterField === '' || historico.includes(filterField)) &&
+            (filterConta === '' || conta.includes(filterConta))) {
+            row.classList.remove('highlight');
         }
-    })
-    .catch(() => {
-        alert('Erro ao remover a conciliação.');
     });
+
+    alert('Conciliação removida visualmente. Para salvar as alterações, clique em "Salvar Conciliação".');
 }
