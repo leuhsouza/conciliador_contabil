@@ -62,12 +62,13 @@ def data():
     if order_direction.lower() not in ['asc', 'desc']:
         order_direction = 'asc'  # Redefine para ascendente se o parâmetro for inválido
 
-    # Adiciona a cláusula ORDER BY à consulta SQL
-    query += f" ORDER BY {order_by} {order_direction.upper()}"
+    # Inicializa as variáveis de filtro
+    filter_value = ''
+    filter_conta = ''
 
-    if request.method == 'POST':
-        filter_value = request.form.get('filter_field')
-        filter_conta = request.form.get('filter_conta')
+    if request.method == 'POST' or 'filter_field' in request.args or 'filter_conta' in request.args:
+        filter_value = request.form.get('filter_field') or request.args.get('filter_field', '').strip()
+        filter_conta = request.form.get('filter_conta') or request.args.get('filter_conta', '').strip()
 
         if filter_value:
             where_clauses.append("historico LIKE ?")
@@ -78,25 +79,29 @@ def data():
             filters.append(f"%{filter_conta}%")
 
         if where_clauses:
-            query = query.replace('ORDER BY', f"WHERE {' AND '.join(where_clauses)} ORDER BY")
+            query += f" WHERE {' AND '.join(where_clauses)}"
 
+    # Executar a consulta SQL e carregar os dados em um DataFrame
     df = pd.read_sql_query(query, conn, params=filters)
     conn.close()
 
     if df.empty:
-        return render_template('data.html', data_list=[], columns=[], initial_sum=0)
+        return render_template('data.html', data_list=[], columns=[], filter_value=filter_value, filter_conta=filter_conta)
 
-    # Calcular a soma inicial dos valores conciliados
-    df['d'] = pd.to_numeric(df['d'], errors='coerce').fillna(0)
-    df['c'] = pd.to_numeric(df['c'], errors='coerce').fillna(0)
-    initial_sum = (df[df['conciliada'] == 1]['d'].sum() - df[df['conciliada'] == 1]['c'].sum())
+    # Converte colunas numéricas para tipo numérico para evitar ordenação alfabética
+    numeric_columns = ['id', 'd', 'c', 'lancamento']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
+    # Aplicar ordenação com base na coluna escolhida
+    df.sort_values(by=order_by, ascending=(order_direction.lower() == 'asc'), inplace=True)
+
+    # Passar o DataFrame como uma lista de dicionários para o template
     data_list = df.to_dict(orient='records')
     columns = df.columns.tolist()
 
-    return render_template('data.html', data_list=data_list, columns=columns, initial_sum=initial_sum)
-
-
+    return render_template('data.html', data_list=data_list, columns=columns, filter_value=filter_value, filter_conta=filter_conta)
 
 @app.route('/pix', methods=['GET', 'POST'])
 def arquivo_pix():
