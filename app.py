@@ -230,7 +230,7 @@ def download_filtered_data():
         worksheet = writer.sheets['FilteredData']
 
         # Formatação para as células destacadas
-        highlighted_format = workbook.add_format({'bg_color': 'yellow'})
+        highlighted_format = workbook.add_format({'bg_color': '#D8E4BC'})
 
         # Destacar as células de linhas que têm a coluna 'conciliada' igual a True ou 1
         for row_num, value in enumerate(df['conciliada'], start=1):  # Começa em 1 para pular o cabeçalho
