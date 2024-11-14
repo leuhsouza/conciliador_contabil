@@ -157,3 +157,28 @@ function removeConciliation() {
 
     alert('Conciliação removida visualmente. Para salvar as alterações, clique em "Salvar Conciliação".');
 }
+
+function updateTableSum() {
+    let totalD = 0;
+    let totalC = 0;
+
+    // Itera sobre todas as linhas visíveis na tabela e soma os valores das colunas D e C
+    document.querySelectorAll('table.data tbody tr').forEach(row => {
+        const dValue = parseFloat(row.querySelector('td:nth-child(7)').textContent.replace(',', '.')) || 0; // Coluna D
+        const cValue = parseFloat(row.querySelector('td:nth-child(8)').textContent.replace(',', '.')) || 0; // Coluna C
+        
+        totalD += dValue;
+        totalC += cValue;
+    });
+
+    // Atualiza os valores exibidos no rodapé
+    document.getElementById('sumColD').textContent = totalD.toFixed(2);
+    document.getElementById('sumColC').textContent = totalC.toFixed(2);
+}
+
+// Chame a função ao carregar a página e ao aplicar filtros
+document.addEventListener('DOMContentLoaded', updateTableSum);
+document.querySelector('form').addEventListener('submit', function() {
+    // Chame updateTableSum após aplicar o filtro
+    setTimeout(updateTableSum, 500); // Delay para esperar a atualização da tabela
+});

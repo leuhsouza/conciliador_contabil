@@ -52,3 +52,10 @@ table.data th {
     border: 1px solid #ccc; /* Borda opcional */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Sombra para destaque opcional */
 }
+
+table.data tfoot {
+    position: sticky;
+    bottom: 0;
+    background-color: white; /* Ajuste a cor de fundo conforme necessário */
+    z-index: 1;
+}
