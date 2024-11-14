@@ -54,7 +54,11 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
 
     df.dropna(how='all', inplace=True)
     df = df[df.iloc[:, 12] != 'Total:']
-    df.dropna(axis=1, how='all', inplace=True)
+
+    # Remove colunas totalmente vazias, exceto a coluna de índice 10
+    for col in df.columns:
+        if col != 10 and df[col].isna().all():
+            df.drop(columns=col, inplace=True)
 
     for i in range(len(df) - 1, 0, -1):
         if pd.notna(df.iloc[i, 1]) and pd.isna(df.iloc[i, 3]):
@@ -69,9 +73,15 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
         df['Conta'] = conta_contabil  # Adicionar a coluna 'Conta'
 
     df.reset_index(drop=True, inplace=True)
+    pd.set_option('display.max_columns', None)
+    print(df.head(20))
 
     # Criar o DataFrame para o banco de dados sem a coluna de saldo (assumindo que a coluna de saldo seja a coluna 7)
     df_db = df.drop(df.columns[7], axis=1)  # Remove a coluna de saldo
+
+    # Verificar os itens do DataFrame
+    pd.set_option('display.max_columns', None)
+    print(df_db.head(20))
 
     # Verificar a quantidade de colunas após a remoção da coluna de saldo
     print(f"Número de colunas em df_db: {df_db.shape[1]}")
@@ -99,7 +109,7 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
                 dc TEXT,
                 conta TEXT,
                 conciliada BOOLEAN DEFAULT 0,
-                UNIQUE(lancamento, lote,d)
+                UNIQUE(lancamento, lote, d)
             )
         ''')
 
@@ -112,7 +122,7 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
             cursor.execute('''
                 INSERT OR IGNORE INTO dados (id, data, historico, contra_partida, lote, lancamento, d, c, dc, conta, conciliada)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (next_id, *row, 0)) # Adiciona 0 para a coluna 'conciliada'
+            ''', (next_id, *row, 0))  # Adiciona 0 para a coluna 'conciliada'
             print(f"Rowcount após inserção: {cursor.rowcount}")
             if cursor.rowcount > 0:
                 next_id += 1
@@ -125,11 +135,9 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
         # Salvar o DataFrame completo com a coluna de saldo
         df.to_excel(output_path, index=False, header=False)
 
-    
     ensure_conciliated_column(db_path)
 
     return linhas_importadas
-
 
 def process_excel_varias_contas(file_path, db_path=None, output_path=None, enviar_bd=False):
     # Carregar o arquivo Excel sem cabeçalhos
@@ -196,6 +204,12 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
     # Preparar DataFrame para o banco de dados
     df_db.drop(df_db.columns[2], axis=1, inplace=True)  # Remove a coluna de índice 4
     df_db.drop(df_db.columns[7], axis=1, inplace=True)  # Remove a coluna de saldo
+
+    #verificar os istens do dataframe
+    pd.set_option('display.max_columns', None)
+    print(df_db.head(20))
+    # Verificar a quantidade de colunas após a remoção da coluna de saldo
+    print(f"Número de colunas em df_db: {df_db.shape[1]}")
 
     # Verificar se o DataFrame para o banco de dados tem linhas
     print(f"Número de linhas em df_db: {len(df_db)}")

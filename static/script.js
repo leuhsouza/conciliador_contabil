@@ -171,9 +171,13 @@ function updateTableSum() {
         totalC += cValue;
     });
 
+    // Calcula a diferença entre as somas de D e C
+    const difference = totalD - totalC;
+
     // Atualiza os valores exibidos no rodapé
     document.getElementById('sumColD').textContent = totalD.toFixed(2);
     document.getElementById('sumColC').textContent = totalC.toFixed(2);
+    document.getElementById('totalDifference').textContent = difference.toFixed(2);
 }
 
 // Chame a função ao carregar a página e ao aplicar filtros
