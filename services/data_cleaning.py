@@ -57,8 +57,9 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
 
     # Remove colunas totalmente vazias, exceto a coluna de índice 10
     for col in df.columns:
-        if col != 10 and df[col].isna().all():
+        if col not in [10, 13] and df[col].isna().all():
             df.drop(columns=col, inplace=True)
+
 
     for i in range(len(df) - 1, 0, -1):
         if pd.notna(df.iloc[i, 1]) and pd.isna(df.iloc[i, 3]):
