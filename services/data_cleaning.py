@@ -84,7 +84,7 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
 
     # Criar o DataFrame para o banco de dados sem a coluna de saldo (assumindo que a coluna de saldo seja a coluna 7)
     df_db = df.drop(df.columns[7], axis=1)  # Remove a coluna de saldo
-
+    df_db.drop(df_db.columns[7], axis=1, inplace=True) # Remove a coluna de D/C #Após a ultima deleção o indice do D/C é 7
     # Verificar os itens do DataFrame
     pd.set_option('display.max_columns', None)
     print(df_db.head(20))
@@ -93,9 +93,13 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
     print(f"Número de colunas em df_db: {df_db.shape[1]}")
     print("Colunas do DataFrame para o banco de dados:", df_db.columns)
 
-    # Ajustar o DataFrame para ter exatamente 9 colunas (excluindo saldo e incluindo conta)
-    if df_db.shape[1] != 9:
-        raise ValueError(f"O DataFrame para o banco de dados não tem 9 colunas. Ele tem {df_db.shape[1]} colunas.")
+    print(df_db.columns)
+    #preparando df para importação   
+ 
+
+    # Ajustar o DataFrame para ter exatamente 8 colunas (excluindo saldo e incluindo conta)
+    if df_db.shape[1] != 8:
+        raise ValueError(f"O DataFrame para o banco de dados não tem 8 colunas. Ele tem {df_db.shape[1]} colunas.")
 
     linhas_importadas = 0
 
@@ -112,10 +116,9 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
                 lancamento TEXT,
                 d TEXT,
                 c TEXT,
-                dc TEXT,
                 conta TEXT,
                 conciliada BOOLEAN DEFAULT 0,
-                UNIQUE(lancamento, lote, d)
+                UNIQUE(lancamento, lote)
             )
         ''')
 
@@ -126,8 +129,8 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
         for row in df_db.itertuples(index=False, name=None):
             print(f"Tentando inserir linha: {row}")
             cursor.execute('''
-                INSERT OR IGNORE INTO dados (id, data, historico, contra_partida, lote, lancamento, d, c, dc, conta, conciliada)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR IGNORE INTO dados (id, data, historico, contra_partida, lote, lancamento, d, c, conta, conciliada)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?,  ?, ?)
             ''', (next_id, *row, 0))  # Adiciona 0 para a coluna 'conciliada'
             print(f"Rowcount após inserção: {cursor.rowcount}")
             if cursor.rowcount > 0:
@@ -212,9 +215,11 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
     # Remover as linhas identificadas do DataFrame para o banco de dados
     df_db = df.drop(indices_para_remover).copy()
 
+    print(df_db.columns)
     # Preparar DataFrame para o banco de dados
     df_db.drop(df_db.columns[2], axis=1, inplace=True)  # Remove a coluna de índice 4
     df_db.drop(df_db.columns[7], axis=1, inplace=True)  # Remove a coluna de saldo
+    df_db.drop(df_db.columns[7], axis=1, inplace=True) # Remove a coluna de D/C
 
     #verificar os istens do dataframe
     pd.set_option('display.max_columns', None)
@@ -241,7 +246,6 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
                 lancamento TEXT,
                 d TEXT,
                 c TEXT,
-                dc TEXT,
                 conta TEXT,
                 conciliada BOOLEAN DEFAULT 0,
                 UNIQUE(lancamento, lote)
@@ -255,8 +259,8 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
         linhas_importadas = 0
         for row in df_db.itertuples(index=False, name=None):
             cursor.execute('''
-                INSERT OR IGNORE INTO dados (id, data, historico, contra_partida, lote, lancamento, d, c, dc, conta, conciliada)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR IGNORE INTO dados (id, data, historico, contra_partida, lote, lancamento, d, c, conta, conciliada)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (next_id, *row, 0)) # Adiciona 0 para a coluna 'conciliada'
             if cursor.rowcount > 0:
                 next_id += 1
