@@ -1,0 +1,7 @@
+__pycache__/
+arquivo_pix.txt
+uploaded_file.xlsx
+.env
+filtered_data.xlsx
+non_conciliated_data.xlsx
+database.sqlite
