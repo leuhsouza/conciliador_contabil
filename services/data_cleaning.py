@@ -73,6 +73,11 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
     if conta_contabil:
         df['Conta'] = conta_contabil  # Adicionar a coluna 'Conta'
 
+# Converte a coluna de índice 2 (data) para o formato esperado pelo SQLite
+    if 2 in df.columns:
+        df[2] = pd.to_datetime(df[2], format='%d/%m/%Y', errors='coerce')  # Converte para datetime
+        df[2] = df[2].dt.strftime('%Y-%m-%d')  # Formata para o padrão YYYY-MM-DD
+
     df.reset_index(drop=True, inplace=True)
     pd.set_option('display.max_columns', None)
     print(df.head(20))
@@ -100,7 +105,7 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS dados (
                 id INTEGER PRIMARY KEY,
-                data TEXT,
+                data DATE,
                 historico TEXT,
                 contra_partida TEXT,
                 lote TEXT,
@@ -183,6 +188,11 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
     conta_contabil = None
     indices_para_remover = []  # Lista para armazenar os índices das linhas a serem removidas
 
+# Converte a coluna de índice 2 (data) para o formato esperado pelo SQLite
+    if 2 in df.columns:
+        df[2] = pd.to_datetime(df[2], format='%d/%m/%Y', errors='coerce')  # Converte para datetime
+        df[2] = df[2].dt.strftime('%Y-%m-%d')  # Formata para o padrão YYYY-MM-DD
+
     for index, row in df.iterrows():
         if pd.notna(row[4]) and isinstance(row[4], str):
             row[4] = re.sub(r'\s+', ' ', row[4]).strip()
@@ -224,7 +234,7 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS dados (
                 id INTEGER PRIMARY KEY,
-                data TEXT,
+                data DATE,
                 historico TEXT,
                 contra_partida TEXT,
                 lote TEXT,

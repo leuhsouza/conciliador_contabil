@@ -52,7 +52,13 @@
                         <tr data-conciliated="{{ 1 if row['conciliada'] == 1 else 0 }}" class="{{ 'highlight' if row['conciliada'] == 1 else '' }}">
                         
                             {% for col in columns %}
-                                <td>{{ row[col] }}</td>
+                                <td>
+                                    {% if col == 'data' %}
+                                        {{ row[col] | format_date }}
+                                    {% else %}
+                                        {{ row[col] }}
+                                    {% endif %}
+                                </td>
                             {% endfor %}
                         </tr>
                     {% endfor %}
