@@ -1,11 +1,23 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, make_response
+from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, make_response,session
 import sqlite3
 import pandas as pd
 from services.data_cleaning import process_excel, process_excel_varias_contas
 from services.pixtxt import processar_lancamentos
-import io
+import os
+from dotenv import load_dotenv
+
+
+# Carregar variáveis de ambiente do arquivo .env
+load_dotenv()
 
 app = Flask(__name__)
+
+
+# Defina a chave secreta a partir da variável de ambiente
+app.secret_key = os.getenv('SECRET_KEY')
+
+if not app.secret_key:
+    raise RuntimeError("A chave secreta não foi configurada. Verifique as variáveis de ambiente.")
 
 @app.route('/')
 def index():
@@ -36,26 +48,27 @@ def data():
     where_clauses = []
 
     # Lista de colunas válidas para ordenação
-    valid_columns = ['data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta']
+    valid_columns = ['id', 'data', 'historico', 'contra_partida', 'lote', 'lancamento', 'd', 'c', 'dc', 'conta', 'conciliado']
 
     # Captura os parâmetros de ordenação da solicitação
-    order_by = request.args.get('order_by', 'data')  # Define a coluna 'data' como padrão
+    order_by = request.args.get('order_by', 'id')  # Define a coluna 'id' como padrão
     order_direction = request.args.get('order_direction', 'asc')  # 'asc' é o padrão
 
     # Valida o parâmetro de ordenação para evitar injeção de SQL
     if order_by not in valid_columns:
-        order_by = 'data'  # Redefine para a coluna padrão se o parâmetro for inválido
+        order_by = 'id'  # Redefine para a coluna padrão se o parâmetro for inválido
 
     # Valida a direção da ordenação
     if order_direction.lower() not in ['asc', 'desc']:
         order_direction = 'asc'  # Redefine para ascendente se o parâmetro for inválido
 
-    # Adiciona a cláusula ORDER BY à consulta SQL
-    query += f" ORDER BY {order_by} {order_direction.upper()}"
+    # Inicializa as variáveis de filtro
+    filter_value = ''
+    filter_conta = ''
 
-    if request.method == 'POST':
-        filter_value = request.form.get('filter_field')
-        filter_conta = request.form.get('filter_conta')
+    if request.method == 'POST' or 'filter_field' in request.args or 'filter_conta' in request.args:
+        filter_value = request.form.get('filter_field') or request.args.get('filter_field', '').strip()
+        filter_conta = request.form.get('filter_conta') or request.args.get('filter_conta', '').strip()
 
         if filter_value:
             where_clauses.append("historico LIKE ?")
@@ -66,14 +79,29 @@ def data():
             filters.append(f"%{filter_conta}%")
 
         if where_clauses:
-            query = query.replace('ORDER BY', f"WHERE {' AND '.join(where_clauses)} ORDER BY")
+            query += f" WHERE {' AND '.join(where_clauses)}"
 
+    # Executar a consulta SQL e carregar os dados em um DataFrame
     df = pd.read_sql_query(query, conn, params=filters)
     conn.close()
 
-    table_html = df.to_html(classes='data', index=False)
-    return render_template('data.html', table=table_html)
+    if df.empty:
+        return render_template('data.html', data_list=[], columns=[], filter_value=filter_value, filter_conta=filter_conta)
 
+    # Converte colunas numéricas para tipo numérico para evitar ordenação alfabética
+    numeric_columns = ['id', 'd', 'c', 'lancamento']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    # Aplicar ordenação com base na coluna escolhida
+    df.sort_values(by=order_by, ascending=(order_direction.lower() == 'asc'), inplace=True)
+
+    # Passar o DataFrame como uma lista de dicionários para o template
+    data_list = df.to_dict(orient='records')
+    columns = df.columns.tolist()
+
+    return render_template('data.html', data_list=data_list, columns=columns, filter_value=filter_value, filter_conta=filter_conta)
 
 @app.route('/pix', methods=['GET', 'POST'])
 def arquivo_pix():
@@ -201,16 +229,127 @@ def download_filtered_data():
         workbook = writer.book
         worksheet = writer.sheets['FilteredData']
 
-        # Formatação para as linhas destacadas
-        highlighted_format = workbook.add_format({'bg_color': 'yellow'})
+        # Formatação para as células destacadas
+        highlighted_format = workbook.add_format({'bg_color': '#D8E4BC'})
 
-        # Destacar linhas que foram selecionadas na tabela
-        for row_num, _ in enumerate(df.index, start=1):
-            if df.iloc[row_num - 1]['highlighted']:  # Suponha que 'highlighted' indique a seleção
-                worksheet.set_row(row_num, None, highlighted_format)
+        # Destacar as células de linhas que têm a coluna 'conciliada' igual a True ou 1
+        for row_num, value in enumerate(df['conciliada'], start=1):  # Começa em 1 para pular o cabeçalho
+            if value == 1 or value is True:
+                for col_num in range(len(df.columns)):
+                    worksheet.write(row_num, col_num, df.iloc[row_num - 1, col_num], highlighted_format)
 
     return send_file(output_path, as_attachment=True)
 
+
+@app.route('/download_non_conciliated', methods=['POST'])
+def download_non_conciliated():
+    filter_value = request.form.get('filter_field')
+    filter_conta = request.form.get('filter_conta')
+
+    conn = sqlite3.connect('database.sqlite')
+    query = "SELECT * FROM dados WHERE conciliada = 0"
+    filters = []
+    where_clauses = []
+
+    if filter_value:
+        where_clauses.append("historico LIKE ?")
+        filters.append(f"%{filter_value}%")
+
+    if filter_conta:
+        where_clauses.append("conta LIKE ?")
+        filters.append(f"%{filter_conta}%")
+
+    if where_clauses:
+        query += f" AND {' AND '.join(where_clauses)}"
+
+    df = pd.read_sql_query(query, conn, params=filters)
+    conn.close()
+
+    if df.empty:
+        return "Nenhum dado encontrado com os filtros aplicados."
+
+    # Salvar o DataFrame em um arquivo Excel
+    output_path = 'non_conciliated_data.xlsx'
+    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='NonConciliatedData')
+        workbook = writer.book
+        worksheet = writer.sheets['NonConciliatedData']
+
+        # Formatação opcional pode ser adicionada aqui se necessário
+
+    return send_file(output_path, as_attachment=True)
+
+
+@app.route('/save_conciliation', methods=['POST'])
+def save_conciliation():
+    data = request.get_json()
+    selected_ids = data.get('ids', [])  # IDs das linhas que estão selecionadas
+    all_ids = data.get('all_ids', [])  # IDs de todas as linhas filtradas ou mostradas
+
+    if not all_ids:
+        return jsonify(success=False, message="Nenhuma linha foi encontrada para conciliação.")
+
+    if not isinstance(all_ids, list) or not isinstance(selected_ids, list):
+        return jsonify(success=False, message="Formato de dados inválido para IDs.")
+
+    try:
+        with sqlite3.connect('database.sqlite') as conn:
+            cursor = conn.cursor()
+
+            # Atualizar todas as linhas exibidas para conciliada = 0 (não selecionadas)
+            if all_ids:
+                query_reset = f"UPDATE dados SET conciliada = 0 WHERE id IN ({','.join('?' * len(all_ids))})"
+                cursor.execute(query_reset, all_ids)
+
+            # Atualizar apenas as linhas selecionadas para conciliada = 1
+            if selected_ids:
+                query_set = f"UPDATE dados SET conciliada = 1 WHERE id IN ({','.join('?' * len(selected_ids))})"
+                cursor.execute(query_set, selected_ids)
+
+            conn.commit()
+
+        return jsonify(success=True, message="Conciliação salva com sucesso.")
+    except Exception as e:
+        return jsonify(success=False, message=f"Erro ao salvar a conciliação: {str(e)}")
+
+
+
+@app.route('/remove_conciliation', methods=['POST'])
+def remove_conciliation():
+    data = request.get_json()
+    filter_field = data.get('filter_field', '').strip()
+    filter_conta = data.get('filter_conta', '').strip()
+
+    conn = sqlite3.connect('database.sqlite')
+    cursor = conn.cursor()
+
+    try:
+        if filter_field or filter_conta:
+            # Remover a conciliação das linhas que correspondem aos filtros
+            where_clauses = []
+            params = []
+
+            if filter_field:
+                where_clauses.append("historico LIKE ?")
+                params.append(f"%{filter_field}%")
+
+            if filter_conta:
+                where_clauses.append("conta LIKE ?")
+                params.append(f"%{filter_conta}%")
+
+            query = f"UPDATE dados SET conciliada = 0 WHERE {' AND '.join(where_clauses)}"
+            cursor.execute(query, params)
+        else:
+            # Se não houver filtro, remover a conciliação de todas as linhas
+            cursor.execute("UPDATE dados SET conciliada = 0")
+
+        conn.commit()  # Commit temporário para refletir a mudança visualmente, mas sem salvar
+        conn.close()
+
+        return jsonify(success=True, message="Conciliação removida com sucesso.")
+    except Exception as e:
+        conn.close()
+        return jsonify(success=False, message=f"Erro ao remover a conciliação: {str(e)}")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

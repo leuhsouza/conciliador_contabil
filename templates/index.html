@@ -4,24 +4,13 @@
     <meta charset="UTF-8">
     <title>Conciliador de Lançamentos Contábeis</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        .highlight {
-            background-color: lightgreen;
-        }
-        .selected {
-            background-color: lightblue;
-        }
-    </style>
     <!-- Adicionando jQuery via CDN -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
     <h1>Conciliador de Lançamentos Contábeis</h1>
     <h2> Banco de Dados </h2>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file">
-        <input type="submit" value="Upload">
-    </form>
+
     <button onclick="irparabanco()">Ver banco de dados</button>
  
     <script>
@@ -29,7 +18,7 @@
             window.location.href = "{{ url_for('data') }}"; // Gera a URL para a página inicial
         }
     </script>
-    <h2> Limpar arquivo Lote e Razão </h2>
+    <h2> Importar e Salvar arquivo Lote e Razão </h2>
     <form action="/import_data" method="post" enctype="multipart/form-data">
         <label for="file">Selecione o arquivo Excel:</label>
         <input type="file" name="file" id="file" required>

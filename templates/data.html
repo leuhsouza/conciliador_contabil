@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <button onclick="voltarParaInicio()">Voltar para Início</button>
+    <button onclick="window.location.href='/'">Voltar para a Página Inicial</button>
     <form method="post">
         <label for="filter_field">Filtro por Histórico:</label>
         <input type="text" id="filter_field" name="filter_field">
@@ -31,40 +31,51 @@
         <button type="submit">Aplicar Filtro</button>
     </form>
     <h1>Dados</h1>
+    <button id="saveConciliation" onclick="saveConciliation()">Salvar Conciliação</button>
+    <button id="removeConciliation" onclick="removeConciliation()">Remover Conciliação das Linhas Filtradas</button>
     <div style="display: flex;">
         <div>
             <table class="data">
                 <thead>
                     <tr>
-                        <th><a href="{{ url_for('data', order_by='id', order_direction='asc') }}">ID ↑</a> | <a href="{{ url_for('data', order_by='id', order_direction='desc') }}">↓</a></th>
+                        <th><a href="{{ url_for('data', order_by='id', order_direction='asc', filter_field=filter_value, filter_conta=filter_conta) }}">ID ↑</a> | <a href="{{ url_for('data', order_by='id', order_direction='desc', filter_field=filter_value, filter_conta=filter_conta) }}">↓</a></th>
                         {% for column, name in [("data", "Data"), ("historico", "Histórico"), ("contra_partida", "Contra Partida"), ("lote", "Lote"), ("lancamento", "Lançamento"), ("d", "D"), ("c", "C"), ("dc", "D/C"), ("conta", "Conta")] %}
                         <th>
-                            <a href="{{ url_for('data', order_by=column, order_direction='asc') }}">{{ name }} ↑</a> |
-                            <a href="{{ url_for('data', order_by=column, order_direction='desc') }}">↓</a>
+                            <a href="{{ url_for('data', order_by=column, order_direction='asc', filter_field=filter_value, filter_conta=filter_conta) }}">{{ name }} ↑</a> |
+                            <a href="{{ url_for('data', order_by=column, order_direction='desc', filter_field=filter_value, filter_conta=filter_conta) }}">↓</a>
                         </th>
                         {% endfor %}
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in table_data %}
-                    <tr>
-                        {% for cell in row %}
-                        <td>
-                            {% if loop.index in [7, 8] %}  <!-- Índices das colunas D e C -->
-                                {{ "%.2f" | format(cell) if cell is not none else "0.00" }}
-                            {% else %}
-                                {{ cell }}
-                            {% endif %}
-                        </td>
-                        {% endfor %}
-                    </tr>
+                    {% for row in data_list %}
+                        <tr data-conciliated="{{ 1 if row['conciliada'] == 1 else 0 }}" class="{{ 'highlight' if row['conciliada'] == 1 else '' }}">
+                        
+                            {% for col in columns %}
+                                <td>{{ row[col] }}</td>
+                            {% endfor %}
+                        </tr>
                     {% endfor %}
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6" style="text-align: right;"><strong>Total:</strong></td>
+                        <td id="sumColD">0.00</td>
+                        <td id="sumColC">0.00</td>
+                        <td id="totalDifference">0.00</td>
+                    </tr>
+                </tfoot>
             </table>
-            <form action="/download_filtered_data" method="post">
+            <form action="/download_filtered_data" method="post" id="downloadForm">
+                <input type="hidden" name="selected_ids" id="selectedIds">
                 <input type="hidden" name="filter_field" value="{{ request.form.get('filter_field') }}">
                 <input type="hidden" name="filter_conta" value="{{ request.form.get('filter_conta') }}">
                 <button type="submit">Download Excel</button>
+            </form>
+            <form action="/download_non_conciliated" method="post">
+                <input type="hidden" name="filter_field" value="{{ request.form.get('filter_field') }}">
+                <input type="hidden" name="filter_conta" value="{{ request.form.get('filter_conta') }}">
+                <button type="submit">Download Linhas Não Marcadas</button>
             </form>
         </div>
 
@@ -74,71 +85,8 @@
         </div>
     </div>
 
-    <script>
-        $(document).ready(function() {
-            let totalSum = 0;
-
-            function updateSum(row, isAdding) {
-                let dValue = parseFloat($(row).find('td:eq(5)').text().replace(',', '.')) || 0; // Coluna D
-                let cValue = parseFloat($(row).find('td:eq(6)').text().replace(',', '.')) || 0; // Coluna C
-
-                if (isAdding) {
-                    totalSum += dValue;
-                    totalSum -= cValue;
-                } else {
-                    totalSum -= dValue;
-                    totalSum += cValue;
-                }
-
-                $('#sumValue').text(totalSum.toFixed(2));
-            }
-
-            let selectedRow = null;
-
-            $('table.data tr').on('click', function() {
-                if (selectedRow) {
-                    $(selectedRow).removeClass('selected');
-                }
-                selectedRow = this;
-                $(this).addClass('selected').focus();
-            });
-
-            $('table.data tr').on('dblclick', function() {
-                if ($(this).hasClass('highlight')) {
-                    updateSum(this, false);
-                    $(this).removeClass('highlight');
-                } else {
-                    updateSum(this, true);
-                    $(this).addClass('highlight');
-                }
-            });
-
-            $(document).on('keydown', function(event) {
-                if (!selectedRow) return;
-
-                let rows = $('table.data tr');
-                let index = rows.index(selectedRow);
-
-                if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    if (index < rows.length - 1) {
-                        $(selectedRow).removeClass('selected');
-                        selectedRow = rows.get(index + 1);
-                        $(selectedRow).addClass('selected').focus();
-                    }
-                } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    if (index > 0) {
-                        $(selectedRow).removeClass('selected');
-                        selectedRow = rows.get(index - 1);
-                        $(selectedRow).addClass('selected').focus();
-                    }
-                } else if (event.key === 'Enter') {
-                    event.preventDefault();
-                    $(selectedRow).trigger('dblclick');
-                }
-            });
-        });
-    </script>
+    <!-- Inclua o arquivo de script apenas uma vez -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    
 </body>
 </html>

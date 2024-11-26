@@ -2,6 +2,26 @@ import pandas as pd
 import sqlite3
 import re
 
+
+
+def ensure_conciliated_column(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Verifica se a coluna 'conciliada' já existe na tabela 'dados'
+    cursor.execute("PRAGMA table_info(dados)")
+    columns = cursor.fetchall()
+    column_names = [column[1] for column in columns]
+    
+    if 'conciliada' not in column_names:
+        cursor.execute('ALTER TABLE dados ADD COLUMN conciliada BOOLEAN DEFAULT 0')
+        print("Coluna 'conciliada' criada com sucesso.")
+    else:
+        print("Coluna 'conciliada' já existe.")
+    
+    conn.commit()
+    conn.close()
+
 def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
     df = pd.read_excel(file_path, header=None)
 
@@ -34,7 +54,12 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
 
     df.dropna(how='all', inplace=True)
     df = df[df.iloc[:, 12] != 'Total:']
-    df.dropna(axis=1, how='all', inplace=True)
+
+    # Remove colunas totalmente vazias, exceto a coluna de índice 10
+    for col in df.columns:
+        if col not in [10, 13] and df[col].isna().all():
+            df.drop(columns=col, inplace=True)
+
 
     for i in range(len(df) - 1, 0, -1):
         if pd.notna(df.iloc[i, 1]) and pd.isna(df.iloc[i, 3]):
@@ -49,9 +74,15 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
         df['Conta'] = conta_contabil  # Adicionar a coluna 'Conta'
 
     df.reset_index(drop=True, inplace=True)
+    pd.set_option('display.max_columns', None)
+    print(df.head(20))
 
     # Criar o DataFrame para o banco de dados sem a coluna de saldo (assumindo que a coluna de saldo seja a coluna 7)
     df_db = df.drop(df.columns[7], axis=1)  # Remove a coluna de saldo
+
+    # Verificar os itens do DataFrame
+    pd.set_option('display.max_columns', None)
+    print(df_db.head(20))
 
     # Verificar a quantidade de colunas após a remoção da coluna de saldo
     print(f"Número de colunas em df_db: {df_db.shape[1]}")
@@ -78,7 +109,8 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
                 c TEXT,
                 dc TEXT,
                 conta TEXT,
-                UNIQUE(lancamento, lote,d)
+                conciliada BOOLEAN DEFAULT 0,
+                UNIQUE(lancamento, lote, d)
             )
         ''')
 
@@ -89,9 +121,9 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
         for row in df_db.itertuples(index=False, name=None):
             print(f"Tentando inserir linha: {row}")
             cursor.execute('''
-                INSERT OR IGNORE INTO dados (id, data, historico, contra_partida, lote, lancamento, d, c, dc, conta)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (next_id, *row))
+                INSERT OR IGNORE INTO dados (id, data, historico, contra_partida, lote, lancamento, d, c, dc, conta, conciliada)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (next_id, *row, 0))  # Adiciona 0 para a coluna 'conciliada'
             print(f"Rowcount após inserção: {cursor.rowcount}")
             if cursor.rowcount > 0:
                 next_id += 1
@@ -104,8 +136,9 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
         # Salvar o DataFrame completo com a coluna de saldo
         df.to_excel(output_path, index=False, header=False)
 
-    return linhas_importadas
+    ensure_conciliated_column(db_path)
 
+    return linhas_importadas
 
 def process_excel_varias_contas(file_path, db_path=None, output_path=None, enviar_bd=False):
     # Carregar o arquivo Excel sem cabeçalhos
@@ -134,7 +167,7 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
 
     df.dropna(how='all', inplace=True)
     df = df[df.iloc[:, 12] != 'Total:']
-    df = df[df.iloc[:, 15] != 'Transporte da página anterior:']
+    df = df[df.iloc[:, 14] != 'Transporte da página anterior:']
     df.dropna(axis=1, how='all', inplace=True)
 
     # Verificar e unir linhas com base na coluna A (índice 0)
@@ -173,6 +206,12 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
     df_db.drop(df_db.columns[2], axis=1, inplace=True)  # Remove a coluna de índice 4
     df_db.drop(df_db.columns[7], axis=1, inplace=True)  # Remove a coluna de saldo
 
+    #verificar os istens do dataframe
+    pd.set_option('display.max_columns', None)
+    print(df_db.head(20))
+    # Verificar a quantidade de colunas após a remoção da coluna de saldo
+    print(f"Número de colunas em df_db: {df_db.shape[1]}")
+
     # Verificar se o DataFrame para o banco de dados tem linhas
     print(f"Número de linhas em df_db: {len(df_db)}")
     if len(df_db) == 0:
@@ -194,6 +233,7 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
                 c TEXT,
                 dc TEXT,
                 conta TEXT,
+                conciliada BOOLEAN DEFAULT 0,
                 UNIQUE(lancamento, lote)
             )
         ''')
@@ -205,9 +245,9 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
         linhas_importadas = 0
         for row in df_db.itertuples(index=False, name=None):
             cursor.execute('''
-                INSERT OR IGNORE INTO dados (id, data, historico, contra_partida, lote, lancamento, d, c, dc, conta)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (next_id, *row))
+                INSERT OR IGNORE INTO dados (id, data, historico, contra_partida, lote, lancamento, d, c, dc, conta, conciliada)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (next_id, *row, 0)) # Adiciona 0 para a coluna 'conciliada'
             if cursor.rowcount > 0:
                 next_id += 1
                 linhas_importadas += 1
@@ -221,3 +261,5 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
         df_output = df.drop('Conta', axis=1)
         df_output.to_excel(output_path, index=False, header=False)
         print(f"Arquivo processado salvo como {output_path}")
+
+    ensure_conciliated_column(db_path)

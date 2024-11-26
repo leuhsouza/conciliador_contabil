@@ -39,3 +39,23 @@ table.data th {
     display: none;
 }
 
+
+#sumPanel {
+    position: sticky;
+    top: 10px; /* Mantém o painel fixo no topo durante a rolagem */
+    display: block;
+    width: 250px; /* Ajuste conforme necessário */
+    max-height: 100px; /* Defina a altura máxima desejada */
+    overflow-y: auto; /* Permite rolagem interna se o conteúdo for maior */
+    background-color: #f1f1f1; /* Cor de fundo opcional */
+    padding: 10px; /* Espaçamento interno opcional */
+    border: 1px solid #ccc; /* Borda opcional */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Sombra para destaque opcional */
+}
+
+table.data tfoot {
+    position: sticky;
+    bottom: 0;
+    background-color: white; /* Ajuste a cor de fundo conforme necessário */
+    z-index: 1;
+}
