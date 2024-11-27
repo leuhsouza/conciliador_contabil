@@ -83,8 +83,9 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
     print(df.head(20))
 
     # Criar o DataFrame para o banco de dados sem a coluna de saldo (assumindo que a coluna de saldo seja a coluna 7)
-    df_db = df.drop(df.columns[7], axis=1)  # Remove a coluna de saldo
-    df_db.drop(df_db.columns[7], axis=1, inplace=True) # Remove a coluna de D/C #Após a ultima deleção o indice do D/C é 7
+    df_db = df.drop(df.columns[7:8], axis=1)  # Remove a coluna de saldo e a coluna D/C
+    #df_db.drop(df_db.columns[7], axis=1, inplace=True) # Remove a coluna de D/C #Após a ultima deleção o indice do D/C é 7
+
     # Verificar os itens do DataFrame
     pd.set_option('display.max_columns', None)
     print(df_db.head(20))
@@ -102,7 +103,7 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
         raise ValueError(f"O DataFrame para o banco de dados não tem 8 colunas. Ele tem {df_db.shape[1]} colunas.")
 
     linhas_importadas = 0
-
+    
     if enviar_bd:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -218,8 +219,8 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
     print(df_db.columns)
     # Preparar DataFrame para o banco de dados
     df_db.drop(df_db.columns[2], axis=1, inplace=True)  # Remove a coluna de índice 4
-    df_db.drop(df_db.columns[7], axis=1, inplace=True)  # Remove a coluna de saldo
-    df_db.drop(df_db.columns[7], axis=1, inplace=True) # Remove a coluna de D/C
+    df_db.drop(df_db.columns[7:8], axis=1, inplace=True)  # Remove a coluna de saldo
+    #df_db.drop(df_db.columns[7], axis=1, inplace=True) # Remove a coluna de D/C
 
     #verificar os istens do dataframe
     pd.set_option('display.max_columns', None)
