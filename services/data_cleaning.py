@@ -83,8 +83,8 @@ def process_excel(file_path, db_path, output_path=None, enviar_bd=False):
     print(df.head(20))
 
     # Criar o DataFrame para o banco de dados sem a coluna de saldo (assumindo que a coluna de saldo seja a coluna 7)
-    df_db = df.drop(df.columns[7:8], axis=1)  # Remove a coluna de saldo e a coluna D/C
-    #df_db.drop(df_db.columns[7], axis=1, inplace=True) # Remove a coluna de D/C #Após a ultima deleção o indice do D/C é 7
+    df_db = df.drop(df.columns[7], axis=1)  # Remove a coluna de saldo e a coluna D/C
+    df_db.drop(df_db.columns[7], axis=1, inplace=True) # Remove a coluna de D/C #Após a ultima deleção o indice do D/C é 7
 
     # Verificar os itens do DataFrame
     pd.set_option('display.max_columns', None)
@@ -219,12 +219,13 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
     print(df_db.columns)
     # Preparar DataFrame para o banco de dados
     df_db.drop(df_db.columns[2], axis=1, inplace=True)  # Remove a coluna de índice 4
-    df_db.drop(df_db.columns[7:8], axis=1, inplace=True)  # Remove a coluna de saldo
+    df_db.drop(df_db.columns[7], axis=1, inplace=True)  # Remove a coluna de saldo
+    # ver sobre o datraframe está excluindo no dataframe de exportação.
     #df_db.drop(df_db.columns[7], axis=1, inplace=True) # Remove a coluna de D/C
 
     #verificar os istens do dataframe
     pd.set_option('display.max_columns', None)
-    print(df_db.head(20))
+    print(df.head(20))
     # Verificar a quantidade de colunas após a remoção da coluna de saldo
     print(f"Número de colunas em df_db: {df_db.shape[1]}")
 
@@ -273,7 +274,7 @@ def process_excel_varias_contas(file_path, db_path=None, output_path=None, envia
         return linhas_importadas
 
     if output_path:
-        df_output = df.drop('Conta', axis=1)
+        df_output = df#.drop('Conta', axis=1)
         df_output.to_excel(output_path, index=False, header=False)
         print(f"Arquivo processado salvo como {output_path}")
 

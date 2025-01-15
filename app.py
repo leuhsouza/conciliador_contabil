@@ -12,11 +12,20 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Defina a chave secreta a partir da variável de ambiente
-app.secret_key = os.getenv('SECRET_KEY')
+# Para rodar na web (PythonAnywhere) tive que usar essa versão
 
-if not app.secret_key:
-    raise RuntimeError("A chave secreta não foi configurada. Verifique as variáveis de ambiente.")
+# Define o diretório base (onde o arquivo app.py está localizado)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Carrega o arquivo .env a partir do diretório base
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+
+# Defina a chave secreta a partir da variável de ambiente
+# app.secret_key = os.getenv('SECRET_KEY')
+
+# if not app.secret_key:
+#     raise RuntimeError("A chave secreta não foi configurada. Verifique as variáveis de ambiente.")
 
 @app.route('/')
 def index():
@@ -128,7 +137,7 @@ def arquivo_pix():
 
         return render_template('pix_select_sheet.html', sheet_names=sheet_names, file_path=file_path)
 
-    return render_template('pix.html')
+    return render_template('pix_select_sheet.html')
 
 @app.route('/process_pix', methods=['POST'])
 def process_pix():
