@@ -5,23 +5,39 @@ from services.data_cleaning import process_excel, process_excel_varias_contas
 from services.pixtxt import processar_lancamentos
 import os
 from dotenv import load_dotenv
-
+from datetime import datetime
 
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
 
 app = Flask(__name__)
 
+# Para rodar na web (PythonAnywhere) tive que usar essa versão
+
+# Define o diretório base (onde o arquivo app.py está localizado)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Carrega o arquivo .env a partir do diretório base
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
 
 # Defina a chave secreta a partir da variável de ambiente
-app.secret_key = os.getenv('SECRET_KEY')
+# app.secret_key = os.getenv('SECRET_KEY')
 
-if not app.secret_key:
-    raise RuntimeError("A chave secreta não foi configurada. Verifique as variáveis de ambiente.")
+# if not app.secret_key:
+#     raise RuntimeError("A chave secreta não foi configurada. Verifique as variáveis de ambiente.")
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.template_filter('format_date')
+def format_date(value):
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').strftime('%d/%m/%Y')
+    except ValueError:
+        return value  # Retorna o valor original se não for uma data válida
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -121,7 +137,7 @@ def arquivo_pix():
 
         return render_template('pix_select_sheet.html', sheet_names=sheet_names, file_path=file_path)
 
-    return render_template('pix.html')
+    return render_template('pix_select_sheet.html')
 
 @app.route('/process_pix', methods=['POST'])
 def process_pix():
