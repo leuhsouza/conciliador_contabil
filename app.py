@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, make_response,session
 import sqlite3
 import pandas as pd
-from services.data_cleaning import process_excel, process_excel_varias_contas
+from services.data_cleaning import process_excel, process_excel_varias_contas , process_lote
 from services.pixtxt import processar_lancamentos
 import os
 from dotenv import load_dotenv
@@ -192,7 +192,10 @@ def process_data():
             db_path = 'database.sqlite'
             output_path = 'processed_file.xlsx'
 
-            if tipo == "Razao" and subtipo == "varias":
+            if tipo == "Lote":
+                print("Chamando a funçao process_lote")
+                linhas_importadas = process_lote(file_path, db_path, output_path, enviar_bd=enviar_bd)
+            elif tipo == "Razao" and subtipo == "varias":
                 print("Chamando a função process_excel_varias_contas")
                 linhas_importadas = process_excel_varias_contas(file_path, db_path, output_path, enviar_bd=enviar_bd)
             else:
