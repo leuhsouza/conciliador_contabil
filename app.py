@@ -3,7 +3,7 @@ import sqlite3
 import pandas as pd
 from services.data_cleaning import process_excel, process_excel_varias_contas , process_lote
 from services.pixtxt import processar_lancamentos
-from services.rel_pix import process_excel
+from services.rel_pix import process_excel_pix
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -139,6 +139,15 @@ def arquivo_pix():
         return render_template('pix_select_sheet.html', sheet_names=sheet_names, file_path=file_path)
 
     return render_template('pix_select_sheet.html')
+
+@app.route('process_rel_pix', methods=['POST'])
+def process_pix():
+    file_path = request.form.get('file_path')
+    sheet_name = request.form.get('sheet_name')
+
+
+    if file_path and sheet_name:
+        conteudo = process_excel_pix(file_path, sheet_name)
 
 @app.route('/process_pix', methods=['POST'])
 def process_pix():

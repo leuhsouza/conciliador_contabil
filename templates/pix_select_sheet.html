@@ -5,7 +5,18 @@
     <title>Escolha de Planilha</title>
 </head>
 <body>
-    <h1>Escolha a Planilha, o Tipo e Insira a Data do Lançamento</h1>
+    <h1>Escolha a Planilha para gerar o relatório</h1>
+    <form action ="/process_excel_pix" method="post">
+        <input type="hidden" name="file_path" value="{{ file_path }}">
+        <label for="sheet_name">Escolha a Planilha:</label>
+        <select name="sheet_name" id="sheet_name" required>
+            {% for sheet in sheet_names %}
+                <option value="{{ sheet }}">{{ sheet }}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        <button type="submit">Processar Arquivo</button>
+    </form>
     <form action="/process_pix" method="post">
         <input type="hidden" name="file_path" value="{{ file_path }}">
         <label for="sheet_name">Escolha a Planilha:</label>

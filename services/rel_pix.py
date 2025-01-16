@@ -80,7 +80,7 @@ def criar_tabela_dinamica(df, output_file):
 
     print(f"Tabela dinâmica com subtotais salva com sucesso em: {output_file}")
 
-def process_excel():
+def process_excel_pix():
     input_file = select_file("Selecione o arquivo principal:")
     if not input_file:
         print("Nenhum arquivo selecionado.")
@@ -173,4 +173,4 @@ def process_excel():
     criar_tabela_dinamica(df, output_file)
 
 if __name__ == "__main__":
-    process_excel()
+    process_excel_pix()
