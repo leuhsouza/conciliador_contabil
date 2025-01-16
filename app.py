@@ -3,6 +3,7 @@ import sqlite3
 import pandas as pd
 from services.data_cleaning import process_excel, process_excel_varias_contas , process_lote
 from services.pixtxt import processar_lancamentos
+from services.rel_pix import process_excel
 import os
 from dotenv import load_dotenv
 from datetime import datetime
