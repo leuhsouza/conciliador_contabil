@@ -5,28 +5,46 @@
     <title>Escolha de Planilha</title>
 </head>
 <body>
-    <h1>Escolha a Planilha para gerar o relatório</h1>
-    <form action ="/process_excel_pix" method="post">
+    <h1>Escolha a Planilha para Gerar o Relatório</h1>
+
+    {% if process_complete %}
+        <p style="color: green;">O processamento foi concluído com sucesso!</p>
+        <p><a href="{{ download_url }}">Clique aqui para baixar o arquivo gerado</a>.</p>
+    {% elif error %}
+        <p style="color: red;">Ocorreu um erro durante o processamento:</p>
+        <p>{{ error }}</p>
+    {% endif %}
+
+    <hr>
+
+    <!-- Formulário para seleção de planilha e processamento do arquivo original -->
+    <h2>Processar Arquivo Original</h2>
+    <form action="/process_rel_pix" method="post">
         <input type="hidden" name="file_path" value="{{ file_path }}">
-        <label for="sheet_name">Escolha a Planilha:</label>
-        <select name="sheet_name" id="sheet_name" required>
-            {% for sheet in sheet_names %}
+        <label for="sheet_name_original">Escolha a Planilha:</label>
+        <select name="sheet_name" id="sheet_name_original" required>
+            {% for sheet in sheet_names_original %}
                 <option value="{{ sheet }}">{{ sheet }}</option>
             {% endfor %}
         </select>
         <br><br>
-        <button type="submit">Processar Arquivo</button>
+        <button type="submit">Processar Relatório</button>
     </form>
+
+    <hr>
+
+    <!-- Formulário para processar o arquivo gerado -->
+    <h2>Processar Arquivo Gerado</h2>
     <form action="/process_pix" method="post">
-        <input type="hidden" name="file_path" value="{{ file_path }}">
-        <label for="sheet_name">Escolha a Planilha:</label>
-        <select name="sheet_name" id="sheet_name" required>
-            {% for sheet in sheet_names %}
+        <input type="hidden" name="processed_file_path" value="{{ processed_file_path }}">
+        <label for="sheet_name_processed">Escolha a Planilha:</label>
+        <select name="sheet_name" id="sheet_name_processed" required>
+            {% for sheet in sheet_names_processed %}
                 <option value="{{ sheet }}">{{ sheet }}</option>
             {% endfor %}
         </select>
         <br><br>
-        
+
         <label for="data">Data do Lançamento (formato DDMMAAAA):</label>
         <input type="text" name="data" id="data" required>
         <br><br>
@@ -38,7 +56,7 @@
         </select>
         <br><br>
 
-        <button type="submit">Processar Arquivo</button>
+        <button type="submit">Gerar Arquivo Pix</button>
     </form>
 </body>
 </html>

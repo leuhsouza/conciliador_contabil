@@ -1,28 +1,14 @@
 import pandas as pd
 from openpyxl import load_workbook
-from tkinter import Tk
-from tkinter.filedialog import askopenfilename, asksaveasfilename
 
-# Defina o caminho fixo para o arquivo de contas contábeis
+# Caminho fixo para o arquivo de contas contábeis
 contabil_file_path = r"Códigos.xlsx"
 
-def select_file(prompt="Selecione o arquivo"):
-    Tk().withdraw()
-    print(prompt)
-    filename = askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-    return filename
-
-def select_save_file(prompt="Salvar arquivo como"):
-    Tk().withdraw()
-    filename = asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx *.xls")], title=prompt)
-    return filename
-
 def criar_tabela_dinamica(df, output_file):
-    # Gerar colunas "Descrição" e "Nome" para a tabela dinâmica
+    # Código para gerar a tabela dinâmica permanece o mesmo
     df['Descrição'] = df.apply(lambda x: f"{int(x['Conta'])} {x['ContaDescricao']}|Contábil: {int(x['Contabil']) if pd.notna(x['Contabil']) else 747}", axis=1)
     df['Nome'] = df.apply(lambda x: f"{x['Documento']} {x['Matricula']} {x['Nome']}", axis=1)
 
-    # Criar a tabela dinâmica
     tabela_dinamica = pd.pivot_table(
         df,
         index=['Conta', 'Descrição', 'Situacao', 'Nome'],
@@ -31,7 +17,6 @@ def criar_tabela_dinamica(df, output_file):
         margins=False
     )
 
-    # Adicionar linhas de subtotais
     subtotais_descricao = tabela_dinamica.groupby(level=['Conta', 'Descrição']).sum()
     subtotais_descricao.index = pd.MultiIndex.from_tuples(
         [(conta, desc, 'Subtotal', '') for conta, desc in subtotais_descricao.index]
@@ -44,10 +29,8 @@ def criar_tabela_dinamica(df, output_file):
     )
     subtotais_situacao.index.names = tabela_dinamica.index.names
 
-    # Concatenar a tabela com os subtotais
     tabela_completa = pd.concat([tabela_dinamica, subtotais_situacao, subtotais_descricao]).sort_index()
 
-    # Calcular e adicionar os totais das contas "8888" e "9999" ao final
     totais_8888_9999 = pd.DataFrame({
         'Valor': [df.loc[df['Conta'] == '8888', 'Valor'].sum(), df.loc[df['Conta'] == '9999', 'Valor'].sum()],
         'Juros': [0, 0],
@@ -57,120 +40,141 @@ def criar_tabela_dinamica(df, output_file):
         (9999, 'Taxa|Contábil: 9999', 'Subtotal', '')
     ], names=['Conta', 'Descrição', 'Situacao', 'Nome']))
 
-    # Concatenar totais "8888" e "9999" ao final da tabela
     tabela_completa = pd.concat([tabela_completa, totais_8888_9999])
 
-    # Calcular o total geral com a soma padrão da tabela dinâmica
     totais_gerais = pd.DataFrame(tabela_dinamica.sum()).T
     totais_gerais.index = pd.Index([('Total Geral', '', '', '')])
     totais_gerais.index.names = tabela_dinamica.index.names
 
-    # Adicionar manualmente os valores de 8888 e 9999 ao "Total Geral"
     totais_gerais[['Valor', 'Juros', 'ValorPag']] += totais_8888_9999[['Valor', 'Juros', 'ValorPag']].sum()
-
-    # Concatenar o total geral à tabela completa
     tabela_completa = pd.concat([tabela_completa, totais_gerais])
 
-    # Selecionar colunas finais
     tabela_completa = tabela_completa[['Valor', 'Juros', 'ValorPag']]
 
-    # Salvar a tabela dinâmica com subtotais no arquivo de saída
     with pd.ExcelWriter(output_file, engine='openpyxl', mode='a') as writer:
         tabela_completa.to_excel(writer, sheet_name='Relatório')
 
     print(f"Tabela dinâmica com subtotais salva com sucesso em: {output_file}")
 
-def process_excel_pix():
-    input_file = select_file("Selecione o arquivo principal:")
-    if not input_file:
-        print("Nenhum arquivo selecionado.")
-        return
+import pandas as pd
+from openpyxl import load_workbook
 
+# Caminho fixo para o arquivo de contas contábeis
+contabil_file_path = r"Códigos.xlsx"
+
+def process_excel_pix(input_file, sheet_name, output_file):
     try:
+        # Validar o caminho do arquivo e a planilha selecionada
+        if not input_file:
+            raise ValueError("Caminho do arquivo não fornecido.")
+        if not sheet_name:
+            raise ValueError("Nome da planilha não fornecido.")
+        
+        # Carregar o arquivo Excel
+        workbook = load_workbook(input_file, data_only=True)
+        sheets = workbook.sheetnames
+        
+        # Verificar se a planilha existe no arquivo
+        if sheet_name not in sheets:
+            raise ValueError(f"A planilha '{sheet_name}' não foi encontrada no arquivo '{input_file}'.")
+        
+        # Carregar a planilha selecionada
+        df = pd.read_excel(input_file, sheet_name=sheet_name, header=None)
+        
+        # Validar se a planilha tem colunas suficientes
+        if df.shape[1] < 9:
+            raise ValueError("A planilha não possui o número mínimo de colunas para o processamento.")
+
+        # Verifica a presença de 'operações' na coluna 7; se não encontrar, verifica na coluna B
+        operacoes_rows = df.iloc[:, 7].str.contains('operações', case=False, na=False) | \
+                        df.iloc[:, 1].str.contains('operações', case=False, na=False)
+
+        # Verifica a presença de 'Taxa' na coluna 7; se não encontrar, verifica na coluna B
+        taxa_rows = df.iloc[:, 7].str.contains('Taxa', case=False, na=False) | \
+                    df.iloc[:, 1].str.contains('Taxa', case=False, na=False)
+
+        # Busca os valores para 'operações'
+        if operacoes_rows.any():
+            operacoes_value = df.loc[operacoes_rows, df.columns[8]].values[0]  # Valor da coluna 8
+            txt_operacoes = df.loc[operacoes_rows, df.columns[7]].values[0]  # Texto da coluna 7
+
+            # Caso esteja ausente, tenta buscar na coluna C
+            if pd.isna(operacoes_value):
+                operacoes_value = df.loc[operacoes_rows, df.columns[2]].values[0]
+
+        # Busca os valores para 'Taxa'
+        if taxa_rows.any():
+            taxa_value = df.loc[taxa_rows, df.columns[8]].values[0]  # Valor da coluna 8
+            txt_taxa = df.loc[taxa_rows, df.columns[7]].values[0]  # Texto da coluna 7
+
+            # Caso esteja ausente, tenta buscar na coluna C
+            if pd.isna(taxa_value):
+                taxa_value = df.loc[taxa_rows, df.columns[2]].values[0]
+
+        # Define valores como None caso não sejam encontrados
+        operacoes_value = operacoes_value if operacoes_rows.any() else None
+        txt_operacoes = txt_operacoes if operacoes_rows.any() else None
+        taxa_value = taxa_value if taxa_rows.any() else None
+        txt_taxa = txt_taxa if taxa_rows.any() else None
+
+        # Encontrar o índice da primeira linha de dados válidos
+        first_value_index = df[df.iloc[:, 0].notna()].index[0]
+        df.columns = df.iloc[first_value_index]
+        df = df.iloc[first_value_index + 1:].reset_index(drop=True)
+
+        if 'Documento' in df.columns:
+            df['Documento'] = df['Documento'].astype(str).str.replace(r'^990000', '', regex=True)
+
+        if 'TipoConta' in df.columns:
+            df = df.drop('TipoConta', axis=1)
+
+        # Adicionar valores de operações e taxas
+        ultima_linha = df.dropna(how='all').index[-1]
+        df.at[ultima_linha + 1, ('Valor', 'ValorPag')] = operacoes_value
+        df.at[ultima_linha + 2, ('Valor', 'ValorPag')] = taxa_value
+        df.at[ultima_linha + 1, ('ContaDescricao')] = txt_operacoes
+        df.at[ultima_linha + 2, ('ContaDescricao')] = txt_taxa
+        df.at[ultima_linha + 1, ('Conta')] = '8888'
+        df.at[ultima_linha + 2, ('Conta')] = '9999'
+
+        # Calcular juros
+        df['Juros'] = df['ValorPag'] - df['Valor']
+        df['Juros'] = df['Juros'].clip(lower=0)
+        colunas = list(df.columns)
+        colunas.insert(9, colunas.pop(colunas.index('Juros')))
+        df = df[colunas]
+
+        # Adicionar coluna 'Contabil'
+        df.insert(3, 'Contabil', None)
+
+        # Processar contas contábeis
         df_contabil = pd.read_excel(contabil_file_path, sheet_name="Planilha2", dtype={'Conta': str})
         df_contabil['Conta'] = df_contabil['Conta'].str.strip()
         df_contabil['Descricao'] = df_contabil['Descricao'].astype(str).str.strip()
         df_contabil['Chave'] = df_contabil['Conta'] + ' ' + df_contabil['Descricao']
-    except FileNotFoundError:
-        print(f"Arquivo de contas contábeis não encontrado no caminho: {contabil_file_path}")
-        return
 
-    workbook = load_workbook(input_file, data_only=True)
-    sheets = workbook.sheetnames
-    print("Planilhas disponíveis:")
-    for idx, sheet in enumerate(sheets):
-        print(f"{idx + 1}. {sheet}")
+        contas_especiais = ['0101', '0102', '0103', '0104', '0105', '0106']
+        for i, row in df.iterrows():
+            conta = str(row['Conta']).strip()
+            situacao = str(row.get('Situacao', '')).strip()
 
-    sheet_num = int(input("Digite o número da planilha que você deseja usar: "))
-    if sheet_num < 1 or sheet_num > len(sheets):
-        print("Número da planilha inválido.")
-        return
+            if conta in contas_especiais:
+                chave = f"{conta} {situacao}"
+                conta_contabil = df_contabil[df_contabil['Chave'] == chave]['Contabil'].values
+            else:
+                conta_contabil = df_contabil[df_contabil['Conta'] == conta]['Contabil'].values
 
-    sheet_name = sheets[sheet_num - 1]
-    df = pd.read_excel(input_file, sheet_name=sheet_name, header=None)
+            df.at[i, 'Contabil'] = conta_contabil[0] if conta_contabil.size > 0 else 747
 
-    operacoes_rows = df.iloc[:, 7].str.contains('operações', case=False, na=False)
-    taxa_rows = df.iloc[:, 7].str.contains('Taxa', case=False, na=False)
+        # Ordenar por conta
+        df = df.sort_values("Conta")
 
-    operacoes_value = df.loc[operacoes_rows, df.columns[8]].values[0] if operacoes_rows.any() else None
-    txt_operacoes = df.loc[operacoes_rows, df.columns[7]].values[0] if operacoes_rows.any() else None
-    taxa_value = df.loc[taxa_rows, df.columns[8]].values[0] if taxa_rows.any() else None
-    txt_taxa = df.loc[taxa_rows, df.columns[7]].values[0] if taxa_rows.any() else None
+        # Salvar o arquivo processado
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-    first_value_index = df[df.iloc[:, 0].notna()].index[0]
-    df.columns = df.iloc[first_value_index]
-    df = df.iloc[first_value_index + 1:].reset_index(drop=True)
-
-    if 'Documento' in df.columns:
-        df['Documento'] = df['Documento'].astype(str).str.replace(r'^990000', '', regex=True)
-
-    if 'TipoConta' in df.columns:
-        df = df.drop('TipoConta', axis=1)
-
-    ultima_linha = df.dropna(how='all').index[-1]
-    df.at[ultima_linha + 1, ('Valor', 'ValorPag')] = operacoes_value
-    df.at[ultima_linha + 2, ('Valor', 'ValorPag')] = taxa_value
-    df.at[ultima_linha + 1, ('ContaDescricao')] = txt_operacoes
-    df.at[ultima_linha + 2, ('ContaDescricao')] = txt_taxa
-    df.at[ultima_linha + 1, ('Conta')] = '8888'
-    df.at[ultima_linha + 2, ('Conta')] = '9999'
-
-    df['Juros'] = df['ValorPag'] - df['Valor']
-    df['Juros'] = df['Juros'].clip(lower=0)
-    colunas = list(df.columns)
-    colunas.insert(9, colunas.pop(colunas.index('Juros')))
-    df = df[colunas]
-
-    df.insert(3, 'Contabil', None)
-
-    contas_especiais = ['0101', '0102', '0103', '0104', '0105', '0106']
-    for i, row in df.iterrows():
-        conta = str(row['Conta']).strip()
-        situacao = str(row.get('Situacao', '')).strip()
-
-        if conta in contas_especiais:
-            chave = f"{conta} {situacao}"
-            conta_contabil = df_contabil[df_contabil['Chave'] == chave]['Contabil'].values
-        else:
-            conta_contabil = df_contabil[df_contabil['Conta'] == conta]['Contabil'].values
-
-        df.at[i, 'Contabil'] = conta_contabil[0] if conta_contabil.size > 0 else 747
-
-    df = df.sort_values("Conta")
-
-    output_file = select_save_file("Salvar arquivo como:")
-    if not output_file:
-        print("Nenhum local de salvamento selecionado.")
-        return
-
-    # Salva a planilha principal sem incluir 8888 e 9999
-    with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-    print("Arquivo salvo com sucesso em:", output_file)
+        print(f"Arquivo processado salvo em: {output_file}")
     
-    # Gera a tabela dinâmica incluindo 8888 e 9999
+    except Exception as e:
+        raise ValueError(f"Erro ao processar o arquivo: {e}")
     criar_tabela_dinamica(df, output_file)
-
-if __name__ == "__main__":
-    process_excel_pix()

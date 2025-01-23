@@ -53,9 +53,12 @@ def upload_file():
         process_excel(file_path, 'database.sqlite')
         return redirect(url_for('data'))
 
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_file(filename, as_attachment=True)
+@app.route('/download/<file_name>')
+def download_file(file_name):  # Renomeie o endpoint aqui
+    if os.path.exists(file_name):
+        return send_file(file_name, as_attachment=True)
+    else:
+        return "Arquivo não encontrado.", 404
 
 @app.route('/data', methods=['GET', 'POST'])
 def data():
@@ -133,40 +136,98 @@ def arquivo_pix():
         file_path = 'uploaded_file.xlsx'
         file.save(file_path)
 
-        xls = pd.ExcelFile(file_path)
-        sheet_names = xls.sheet_names
+        xls = pd.ExcelFile(file_path)  # Lê o arquivo e armazena na variável
+        sheet_names_original = xls.sheet_names  # Sheets do arquivo original
 
-        return render_template('pix_select_sheet.html', sheet_names=sheet_names, file_path=file_path)
+        return render_template(
+            'pix_select_sheet.html',
+            sheet_names_original=sheet_names_original,
+            file_path=file_path
+        )
 
     return render_template('pix_select_sheet.html')
 
-@app.route('process_rel_pix', methods=['POST'])
-def process_pix():
-    file_path = request.form.get('file_path')
+
+@app.route('/process_rel_pix', methods=['POST'])
+def process_rel_pix():
+    # Recuperar o caminho do arquivo original
+    original_file_path = request.form.get('file_path')
     sheet_name = request.form.get('sheet_name')
 
+    if not original_file_path or not sheet_name:
+        return redirect(url_for('arquivo_pix'))
 
-    if file_path and sheet_name:
-        conteudo = process_excel_pix(file_path, sheet_name)
+    try:
+        # Verifica se o arquivo original existe
+        if not os.path.exists(original_file_path):
+            raise FileNotFoundError(f"O arquivo original '{original_file_path}' não foi encontrado.")
+
+        # Recarregar as sheets do arquivo original
+        excel_file_original = pd.ExcelFile(original_file_path)
+        sheet_names_original = excel_file_original.sheet_names
+
+        # Define o caminho do arquivo processado
+        processed_file_path = 'processed_output.xlsx'
+
+        # Processar o arquivo
+        process_excel_pix(original_file_path, sheet_name, processed_file_path)
+
+        # Carregar as sheets do arquivo processado
+        excel_file_processed = pd.ExcelFile(processed_file_path)
+        sheet_names_processed = excel_file_processed.sheet_names
+
+        # Renderiza o template com os dois contextos
+        return render_template(
+            'pix_select_sheet.html',
+            file_path=original_file_path,
+            sheet_names_original=sheet_names_original,  # Sheets do arquivo original
+            sheet_names_processed=sheet_names_processed,  # Sheets do arquivo processado
+            processed_file_path=processed_file_path,
+            process_complete=True,
+            download_url=url_for('download_file', file_name=processed_file_path)  # Link do processado
+        )
+    except Exception as e:
+        # Renderiza o template com erro
+        return render_template(
+            'pix_select_sheet.html',
+            file_path=original_file_path,
+            sheet_names_original=[],  # Envia lista vazia em caso de erro
+            sheet_names_processed=[],
+            process_complete=False,
+            error=str(e)
+        )
+
 
 @app.route('/process_pix', methods=['POST'])
 def process_pix():
-    file_path = request.form.get('file_path')
-    sheet_name = request.form.get('sheet_name')
+    processed_file_path = request.form.get('processed_file_path')  # Caminho do arquivo processado
+    sheet_name = request.form.get('sheet_name')  # Sheet selecionada
     data = request.form.get('data')
     tipo = request.form.get('tipo')
 
-    if file_path and sheet_name and data and tipo:
-        conteudo = processar_lancamentos(file_path, sheet_name, data, tipo)
+    if not processed_file_path or not os.path.exists(processed_file_path):
+        return "Erro: Arquivo processado não encontrado.", 400
 
-        output_path = 'arquivo_pix.txt'
-        with open(output_path, 'w') as f:
-            for linha in conteudo:
-                f.write(linha[0] + "\n")
+    if sheet_name and data and tipo:
+        try:
+            # Processar os dados da sheet selecionada
+            conteudo = processar_lancamentos(processed_file_path, sheet_name, data, tipo)
 
-        return send_file(output_path, as_attachment=True)
+            # Salvar o resultado em um arquivo
+            output_path = 'arquivo_pix.txt'
+            with open(output_path, 'w') as f:
+                for linha in conteudo:
+                    f.write(linha[0] + "\n")
+
+            # Retornar o arquivo gerado para download
+            return send_file(output_path, as_attachment=True)
+
+        except Exception as e:
+            return f"Erro ao processar a sheet: {str(e)}", 500
 
     return redirect(url_for('arquivo_pix'))
+
+
 
 @app.route('/import_data', methods=['GET', 'POST'])
 def import_data():
