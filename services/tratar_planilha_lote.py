@@ -1,16 +1,46 @@
 import pandas as pd
 import tkinter as tk
+import os
 from tkinter import filedialog
 
+import xlwings as xw
+import os
+
+
+def converter_xls_para_xlsx(arquivo_xls):
+    """Converte um arquivo .xls para .xlsx usando o Excel via xlwings."""
+    novo_arquivo = arquivo_xls.replace(".xls", ".xlsx")
+
+    try:
+        app = xw.App(visible=False)  # Abre o Excel em segundo plano
+        wb = app.books.open(arquivo_xls)
+        wb.save(novo_arquivo)  # Salva como .xlsx
+        wb.close()
+        app.quit()
+        return novo_arquivo
+    except Exception as e:
+        print(f"Erro ao converter o arquivo: {e}")
+        return None
+
+
 def escolher_arquivo():
-    """Abre uma janela para selecionar um arquivo de entrada."""
+    """Abre uma janela para selecionar um arquivo e converte .xls para .xlsx se necessário."""
     root = tk.Tk()
     root.withdraw()
+    
     arquivo_path = filedialog.askopenfilename(
         title="Selecione o arquivo para importação",
-        filetypes=[("Arquivo XLS", "*.xls *.xlsx")]
+        filetypes=[("Arquivo Excel", "*.xls *.xlsx")]
     )
-    return arquivo_path
+    
+    if not arquivo_path:
+        print("Nenhum arquivo selecionado.")
+        return None  
+
+    if arquivo_path.endswith(".xls"):
+        return converter_xls_para_xlsx(arquivo_path)  # Converte e retorna o novo caminho
+
+    return arquivo_path  # Se já for .xlsx, retorna o próprio caminho
 
 def mover_colunas_para_esquerda(df):
     """Move os dados de uma planilha para a esquerda, a partir da coluna B, quando a condição for atendida."""
