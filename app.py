@@ -275,7 +275,7 @@ def process_data():
 
             mensagem = f"Arquivo processado com sucesso. {'Linhas importadas para o banco de dados: ' + str(linhas_importadas) if enviar_bd else 'Nenhuma linha importada, apenas o arquivo foi salvo.'}"
 
-            return jsonify(success=True, message=mensagem, download_url=url_for('download_file', filename=output_path))
+            return jsonify(success=True, message=mensagem, download_url=url_for('download_file', file_name=os.path.basename(output_path)))
 
         except Exception as e:
             return jsonify(success=False, message=f"Erro ao processar o arquivo: {str(e)}")
