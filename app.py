@@ -7,6 +7,7 @@ from services.rel_pix import process_excel_pix
 import os
 from dotenv import load_dotenv
 from datetime import datetime
+import traceback
 
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
